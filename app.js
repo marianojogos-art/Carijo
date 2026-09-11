@@ -1708,7 +1708,7 @@ async function generatePlanWithAI(initialGeneration = false) {
   $("#planDocument").classList.add("hidden");
   $("#supervisorPanel").classList.add("hidden");
   $("#aiPlanOutput h3").textContent = "Gerando e revisando o planejamento…";
-  $("#aiPlanText").textContent = "O redator prepara o documento e o supervisor analisa sua coerência. Aguarde a conclusão das duas etapas.";
+  $("#aiPlanText").textContent = "Seu planejamento está sendo elaborado e aprimorado pelo Assistente Pedagógico. Aguarde a versão final.";
   $("#copyAIPlan").textContent = "Aguarde";
   $("#aiPlanOutput").classList.remove("hidden");
     const { data, error } = await supabaseClient.functions.invoke("generate-plan", { body: { prompt: generationPrompt, requestType: "plan", supervise: true } });
@@ -1727,7 +1727,7 @@ async function generatePlanWithAI(initialGeneration = false) {
     $("#aiPlanText").textContent = data.plan;
     generatedContext = context;
     generatedContext.prompt = generationPrompt;
-    supervisorReport = data.supervision || { status: "unavailable", text: "A função publicada ainda não enviou o parecer pedagógico." };
+    supervisorReport = null;
     renderGeneratedPlan(data.plan, { type: `PLANEJAMENTO ${context.planType === "quarter" ? "TRIMESTRAL" : "QUINZENAL"} · 2026`, title: `${context.subject} · planejamento ${context.planType === "quarter" ? "trimestral" : "quinzenal"}`, meta: `${context.className} · ${context.lessons} aulas · ${context.planType === "quarter" ? `${context.quarter}º trimestre · 12 semanas` : `${context.start} a ${context.end}`}` });
     renderSupervisorReport();
     $("#aiPlanOutput").classList.add("hidden");
