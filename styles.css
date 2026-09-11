@@ -777,3 +777,22 @@ input, select, textarea { color: var(--ink); }
   body.printing-activity #activityBuilder .generated-plan-body p,
   body.printing-activity #activityBuilder .generated-plan-body li { font-size: 10pt; line-height: 1.6; }
 }
+
+
+/* Carijó: ilustração botânica e marca sem fundo. */
+body {
+  background-color: var(--cream);
+  background-image: linear-gradient(rgba(244,237,224,.83), rgba(244,237,224,.83)), url("carijo-fundo-botanico.webp");
+  background-position: center;
+  background-size: cover;
+  background-attachment: fixed;
+}
+.brand-mark { width: 64px; height: 64px; flex-basis: 64px; }
+.brand-mark img { width: 70px; height: 70px; background: transparent; filter: none; }
+.brand-preview { background: #f8f1e5; }
+@media (max-width: 720px) {
+  body { background-attachment: scroll; background-size: auto 1100px; }
+}
+@media print {
+  body { background: white !important; }
+}
