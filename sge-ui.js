@@ -1,8 +1,8 @@
 /* Fields and worksheet names follow Assistente SGE 2.0 workbook-template.mjs. */
 const SGE_FIELDS = ['Objetivos', 'Conteúdos', 'Metodologia', 'Recursos Didáticos', 'Avaliação'];
 function renderSupervisorReport() {
-  $('#supervisorPanel').classList.toggle('hidden', !supervisorReport);
-  $('#supervisorText').innerHTML = supervisorReport ? generatedTextToHtml(supervisorReport.text || 'Parecer indisponível.') : '';
+  $('#supervisorPanel').classList.add('hidden');
+  $('#supervisorText').textContent = '';
 }
 function openSgeExport() {
   if (!generatedContext) { toast('Gere ou abra um planejamento antes de exportar.'); return; }
