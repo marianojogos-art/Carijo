@@ -796,3 +796,16 @@ body {
 @media print {
   body { background: white !important; }
 }
+
+/* Manifesto: leitura integral em qualquer altura de tela. */
+#ironyModal .irony-modal-card { width: min(860px, calc(100% - 24px)); max-width: 860px; max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; padding: 0 36px 32px; }
+#ironyModal .modal-close { position: sticky; display: block; top: 12px; margin: 12px 0 0 auto; width: 44px; height: 44px; z-index: 2; border-radius: 50%; background: var(--paper); box-shadow: 0 2px 10px #0002; color: var(--ink); }
+#ironyModal h2 { max-width: 650px; font-size: clamp(28px, 4vw, 40px); line-height: 1.16; margin: 12px 0 24px; text-wrap: balance; }
+.manifesto-illustration { margin: 0 0 30px; }
+.manifesto-illustration img { display: block; width: 100%; height: auto; border-radius: 12px; }
+.manifesto-illustration figcaption { font-size: 13px; line-height: 1.6; color: var(--muted); margin-top: 10px; font-style: italic; }
+#ironyModal .irony-copy { max-width: 66ch; margin: 0 auto; gap: 22px; }
+#ironyModal .irony-copy p { font-size: 16px; line-height: 1.85; color: var(--ink); overflow-wrap: anywhere; }
+#ironyModal .modal-actions { padding-top: 24px; margin-top: 24px; border-top: 1px solid #d8cebd; }
+#ironyModal :focus-visible { outline: 3px solid var(--coral); outline-offset: 3px; }
+@media (max-width: 600px) { #ironyModal .irony-modal-card { padding: 0 20px 24px; } #ironyModal .irony-copy p { font-size: 15px; line-height: 1.8; } }
