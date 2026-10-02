@@ -1139,6 +1139,7 @@ async function buildActivityProposal() {
     }
     currentActivityText = data.plan;
     $("#activityAIText").innerHTML = generatedTextToHtml(data.plan);
+    window.CarijoEditor?.generated("activity");
     notifyGenerationUsage(data.usage);
     $("#activityOutput").scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (error) {
@@ -1461,7 +1462,7 @@ function renderGeneratedPlan(plan, metadata = {}) {
 function sanitizeDocumentHtml(html) {
   const template = document.createElement("template");
   template.innerHTML = String(html || "");
-  const allowed = new Set(["DIV", "SECTION", "ARTICLE", "HEADER", "FOOTER", "H1", "H2", "H3", "H4", "P", "UL", "OL", "LI", "STRONG", "B", "EM", "I", "SMALL", "SPAN", "BR", "HR", "CODE", "BLOCKQUOTE"]);
+  const allowed = new Set(["DIV", "SECTION", "ARTICLE", "HEADER", "FOOTER", "H1", "H2", "H3", "H4", "P", "UL", "OL", "LI", "STRONG", "B", "EM", "I", "U", "SMALL", "SPAN", "BR", "HR", "CODE", "BLOCKQUOTE", "TABLE", "THEAD", "TBODY", "TR", "TH", "TD"]);
   [...template.content.querySelectorAll("*")].forEach(element => {
     if (!allowed.has(element.tagName)) {
       element.replaceWith(...element.childNodes);
@@ -1538,6 +1539,7 @@ function printActivity() {
 }
 
 async function saveActivityToHistory() {
+  if (window.CarijoEditor) return window.CarijoEditor.save("activity", true);
   const item = state.classes.find(entry => entry.id === Number($("#activityClassSelect").value)) || state.classes[0];
   const title = $("#activityOutputTitle").textContent.trim() || "Atividade ou avaliação";
   const text = $("#activityAIText").innerText.trim();
@@ -1586,6 +1588,7 @@ function currentPlanSnapshot() {
 }
 
 async function savePlanToHistory() {
+  if (window.CarijoEditor) return window.CarijoEditor.save("plan", true);
   const snapshot = currentPlanSnapshot();
   const item = getSelectedClass();
   const button = $("#savePlan");
@@ -1663,7 +1666,7 @@ function renderHistoryPage() {
   const items = filteredHistory();
   $("#historyTotal").textContent = String(historyPlans.length);
   if (!items.length) {
-    list.innerHTML = `<div class="history-page-empty"><span>◇</span><h2>Nenhum documento encontrado</h2><p>Experimente outro termo ou selecione todos os tipos. Documentos novos aparecem aqui depois de você clicar em salvar — a memória da máquina também precisa de instruções.</p></div>`;
+    list.innerHTML = `<div class="history-page-empty"><span>◇</span><h2>Nenhum documento encontrado</h2><p>Experimente outro termo ou selecione todos os tipos. Documentos gerados e suas edições são salvos automaticamente neste dispositivo. Uma conta permite sincronizar o histórico.</p></div>`;
     return;
   }
   list.innerHTML = items.map(plan => {
@@ -1700,6 +1703,7 @@ function openSavedDocument(plan) {
     $("#activityAIText").innerHTML = plan.document_html ? sanitizeDocumentHtml(plan.document_html) : generatedTextToHtml(currentActivityText);
     $("#activityOutput").classList.remove("hidden");
     showScreen("activityBuilder");
+    window.CarijoEditor?.open(plan, "activity");
     $("#activityOutput").scrollIntoView({ block: "start" });
     return;
   }
@@ -1715,6 +1719,7 @@ function openSavedDocument(plan) {
     renderGeneratedPlan(text, { title: plan.title, meta: `${plan.class_name} · ${plan.subject} · ${plan.period_label}`, type: `${historyTypeLabel(plan.plan_type)} · 2026` });
   }
   showScreen("result");
+  window.CarijoEditor?.open(plan, "plan");
 }
 
 async function duplicateSavedDocument(plan) {
@@ -1736,6 +1741,7 @@ async function deleteSavedDocument(plan) {
   }
   const { error } = await supabaseClient.from("teacher_plans").delete().eq("id", plan.id);
   if (error) { toast("Não foi possível excluir"); return; }
+  localStorage.setItem(DEVICE_DOCUMENTS_KEY, JSON.stringify(readDeviceDocuments().filter(item => item.plan_data?.cloudId !== plan.id)));
   historyPlans = historyPlans.filter(entry => entry.id !== plan.id);
   if (currentPlanId === plan.id) currentPlanId = null;
   renderHistoryPage();
@@ -1746,8 +1752,17 @@ async function loadHistoryPage() {
   if (!hasHistoryAccount()) { historyPlans = readDeviceDocuments(); renderHistoryPage(); $("#historyUsageSummary").textContent = "Salvos neste dispositivo · conta opcional"; return; }
   $("#historyPageList").innerHTML = `<div class="history-page-empty"><p>Consultando a memória burocrática…</p></div>`;
   const { data, error } = await supabaseClient.from("teacher_plans").select("id,user_id,class_id,class_name,subject,plan_type,title,period_label,plan_data,document_html,created_at,updated_at").order("updated_at", { ascending: false }).limit(200);
-  if (error) { $("#historyPageList").innerHTML = `<div class="history-page-empty"><p>Não foi possível carregar o histórico.</p></div>`; return; }
-  historyPlans = [...readDeviceDocuments(), ...(data || [])].sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)));
+  if (error) { historyPlans = readDeviceDocuments(); renderHistoryPage(); $("#historyUsageSummary").textContent = "Sem conexão com a conta · mostrando cópias locais"; return; }
+  const deviceDocuments = readDeviceDocuments();
+  const cloudDocuments = (data || []).map(cloud => {
+    const local = deviceDocuments.find(item => item.plan_data?.cloudId === cloud.id);
+    return local && local.updated_at > cloud.updated_at && local.document_html !== cloud.document_html
+      ? { ...local, id: cloud.id, user_id: cloud.user_id }
+      : cloud;
+  });
+  const cloudIds = new Set(cloudDocuments.map(item => item.id));
+  const localDocuments = readDeviceDocuments().filter(item => !cloudIds.has(item.plan_data?.cloudId));
+  historyPlans = [...localDocuments, ...cloudDocuments].sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)));
   renderHistoryPage();
   await loadUsageStatus();
 }
@@ -1800,6 +1815,7 @@ async function generatePlanWithAI(initialGeneration = false) {
     $("#aiPlanOutput").classList.add("hidden");
     currentPlanId = null;
     notifyGenerationUsage(data.usage);
+    window.CarijoEditor?.generated("plan");
   } catch (error) {
     console.warn("Não foi possível gerar com IA.", error);
     const reason = error.message || "não foi possível concluir a geração";

@@ -1,0 +1,8 @@
+{
+  "name": "carijo",
+  "private": true,
+  "scripts": {
+    "test": "node --check app.js && node --check sge-ui.js && node --check document-editor.js && node tests/smoke.mjs && node tests/generation-guard.mjs && node tests/curriculum-supervisor.mjs && node tests/entry-flow.mjs && node tests/public-generation.mjs && node tests/document-versions.mjs && node tests/editor-persistence.mjs",
+    "preview": "node tests/preview-server.mjs"
+  }
+}
