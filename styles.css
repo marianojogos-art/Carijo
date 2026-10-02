@@ -894,6 +894,17 @@ input, select, textarea { color: var(--ink); }
 .approval-row input { width:20px; height:20px; flex:none; }
 #correctionCanvas,#correctionVideo { max-width:100%; max-height:640px; display:block; margin:20px auto; border-radius:12px; }
 #correctionCanvas[hidden],#correctionVideo[hidden] { display:none; }
+.camera-viewport { position:relative; display:flex; justify-content:center; align-items:center; width:min(100%,720px); min-height:160px; margin:20px auto; background:#171d19; border-radius:18px; overflow:hidden; scroll-margin-block:20px; }
+.camera-viewport.hidden { display:none; }
+.camera-viewport #correctionVideo { width:100%; max-height:55dvh; min-height:180px; object-fit:contain; margin:0; border-radius:0; }
+.camera-viewport #correctionCanvas { max-width:100%; max-height:220px; margin:0 auto; object-fit:contain; }
+.camera-guide { display:none; pointer-events:none; position:absolute; inset:12%; border:2px dashed rgba(255,255,255,.8); border-radius:14px; }
+.camera-live .camera-guide { display:block; }
+.camera-guide span { position:absolute; bottom:12px; left:50%; transform:translateX(-50%); width:max-content; max-width:95%; padding:6px 12px; color:white; background:rgba(0,0,0,.65); font-size:12px; border-radius:8px; text-align:center; }
+.camera-status { text-align:center; min-height:1.5em; line-height:1.5; }
+.camera-result { padding:24px; border:1px solid #90aa83; background:#f2f7ee; border-radius:16px; margin:20px 0; scroll-margin-block:24px; }
+.camera-result h3 { margin-top:0; }.camera-result #cameraResultScore { font-size:22px; font-weight:700; }.camera-result p { line-height:1.6; }
+@media(max-width:650px) { .camera-viewport { width:100%; }.camera-viewport #correctionVideo { max-height:50dvh; }.camera-result { padding:18px; } }
 .assessment-question { break-inside:avoid; margin:24px 0; }
 .admin-nav { margin:16px 8px; }
 .assessment-preview { width:min(1000px,95vw); max-height:92dvh; padding:24px; overflow:auto; border-radius:16px; }

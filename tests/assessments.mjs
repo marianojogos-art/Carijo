@@ -13,7 +13,7 @@ assert.equal(gradeAssessment(a,{q1:1,q2:4}).pending,true);
 const esc=s=>String(s).replace(/</g,'&lt;');assert(!assessmentStudentHtml(a,esc).includes('SEGREDO'));
 assert.throws(()=>validateAssessment({...a,questions:[{...a.questions[0],correctIndex:6}]}));
 assert.throws(()=>validateAssessment({...a,questions:[{...a.questions[1],points:4}]}));
-const bits=encodeCard(a,123);assert.equal(decodeCard(bits,a),123);
+const bits=encodeCard(a,123,2);assert.equal(decodeCard(bits,a),123);
 const damaged=[...bits];damaged[0]^=1;assert.throws(()=>decodeCard(damaged,a));
 assert.throws(()=>decodeCard(bits,{...a,id:'other'}));
 assert.equal(decodeCard(encodeCard(a,{machineId:123,registration:'001'}),a,'001'),123);
