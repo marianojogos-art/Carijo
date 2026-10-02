@@ -41,7 +41,7 @@ if (typeof document !== "undefined") (() => {
     const local = String(record?.id || "").startsWith("local-");
     const owner = record?.user_id || record?.plan_data?.cloudOwner || null;
     return {
-      kind, meta, localId: local ? record.id : readDeviceDocuments().find(x => x.plan_data?.cloudId === record?.id)?.id || `local-${crypto.randomUUID()}`,
+      kind, meta, localId: local ? record.id : (record?.id ? readDeviceDocuments().find(x => x.plan_data?.cloudId === record.id)?.id : null) || `local-${crypto.randomUUID()}`,
       cloudId: local ? (owner === currentUser?.id ? record.plan_data?.cloudId : null) : record?.id,
       owner, versions: Array.isArray(record?.plan_data?.versions) ? record.plan_data.versions : [], revision: 0
     };
@@ -155,6 +155,7 @@ if (typeof document !== "undefined") (() => {
     document.body.append(dialog); dialog.showModal();
   }
   window.CarijoEditor = {
+    metadata(kind) { return sessions[kind]?.meta || metadata(kind); },
     save: persist,
     open(record, kind) {
       sessions[kind] = makeSession(kind, record);

@@ -1518,6 +1518,7 @@ function planPdfName() {
 }
 
 function printPlan() {
+  if (window.CarijoExport) return window.CarijoExport.preview("plan");
   const previousTitle = document.title;
   document.title = planPdfName();
   const restoreTitle = () => { document.title = previousTitle; };
@@ -1528,6 +1529,7 @@ function printPlan() {
 }
 
 function printActivity() {
+  if (window.CarijoExport) return window.CarijoExport.preview("activity");
   const previousTitle = document.title;
   const item = state.classes.find(entry => entry.id === Number($("#activityClassSelect").value)) || state.classes[0];
   document.title = ["carijo", "atividade-avaliacao", item?.name, item?.subject].map(fileSafe).filter(Boolean).join("-");

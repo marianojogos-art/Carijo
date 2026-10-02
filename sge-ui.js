@@ -7,24 +7,30 @@ function renderSupervisorReport() {
 function openSgeExport() {
   if (!generatedContext) { toast('Gere ou abra um planejamento antes de exportar.'); return; }
   const quarter = generatedContext.planType === 'quarter';
+  const period = window.CarijoEditor?.metadata("plan")?.period_label || '';
+  const selectedQuarter = Number(generatedContext.quarter) || Number(String(period).match(/[123]/)?.[0]) || 1;
   const fields = Object.fromEntries([...SGE_FIELDS, 'Referências'].map(name => [name, []]));
   let current = 'Metodologia';
   const normalized = text => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/^\d+[.)]\s*/, '').replace(/[:*#]/g, '').trim().toLowerCase();
   const body = $('.generated-plan-body', $('#planDocument')) || $('#planDocument');
   for (const child of body.children) {
-    const match = Object.keys(fields).find(name => normalized(name) === normalized(child.textContent));
+    const match = Object.keys(fields).find(name => normalized(name) === normalized(child.textContent) || normalized(child.textContent).startsWith(normalized(name) + ' '));
     if (/^H[1-6]$/.test(child.tagName) && match) { current = match; continue; }
     fields[current].push(child.innerText);
   }
   if (fields['Referências'].length) fields.Metodologia.push('Referências:\n' + fields['Referências'].join('\n'));
   const entries = quarter ? [['Conteúdo do Período', body.innerText]] : SGE_FIELDS.map(name => [name, fields[name].join('\n\n')]);
   $('#sgeClass').value = '';
-  $('#sgeFields').innerHTML = (quarter ? `<label>Trimestre<select id="sgeQuarter">${[1,2,3].map(n => `<option value="${n}" ${n === generatedContext.quarter ? 'selected' : ''}>${n}º Trimestre</option>`).join('')}</select></label>` : `<label>Data inicial<input id="sgeStart" type="date" value="${escapeAttr(generatedContext.start || '')}"></label><label>Data final<input id="sgeEnd" type="date" value="${escapeAttr(generatedContext.end || '')}"></label><label>Nº de aulas<input id="sgeLessons" type="number" min="1" value="${Number(generatedContext.lessons) || 1}"></label>`) + entries.map(([name, value], index) => `<label>${name}<textarea data-sge-field="${index}">${escapeHtml(value)}</textarea></label>`).join('');
+  $('#sgeFields').innerHTML = (quarter ? `<label>Trimestre<select id="sgeQuarter">${[1,2,3].map(n => `<option value="${n}" ${n === selectedQuarter ? 'selected' : ''}>${n}º Trimestre</option>`).join('')}</select></label>` : `<label>Data inicial<input id="sgeStart" type="date" value="${escapeAttr(generatedContext.start || '')}"></label><label>Data final<input id="sgeEnd" type="date" value="${escapeAttr(generatedContext.end || '')}"></label><label>Nº de aulas<input id="sgeLessons" type="number" min="1" value="${Number(generatedContext.lessons) || 1}"></label>`) + entries.map(([name, value], index) => `<label>${name}<textarea data-sge-field="${index}">${escapeHtml(value)}</textarea></label>`).join('');
   $('#sgeFeedback').textContent = 'Informe o número real da turma no SGE. Ele não é deduzido do ano escolar.';
+  $('#sgeConfirmed').checked = false;
+  $('#downloadSge').disabled = true;
+  if (!quarter) $('#sgeFields').insertAdjacentHTML('beforeend', `<details class="sge-secondary"><summary>Identificadores de habilidades no SGE (opcional)</summary><p>Código BNCC não é identificador do SGE. Deixe estes campos vazios se não conhecer os identificadores; complete-os depois na planilha do Assistente.</p>${[1,2,3,4,5].map(n => `<label>Habilidade SGE ${n}<input data-sge-skill="${n}" placeholder="Identificador do SGE, não código BNCC"></label>`).join('')}</details>`);
   showModalElement($('#sgeModal'));
 }
 async function downloadSgeWorkbook() {
   try {
+    if (!$('#sgeConfirmed').checked) throw new Error('Confira os campos e confirme a revisão antes de baixar.');
     const turma = $('#sgeClass').value.trim();
     if (!/^\d+$/.test(turma)) throw new Error('Informe o número da turma no SGE.');
     const values = $$('[data-sge-field]').map(input => input.value.trim());
@@ -33,15 +39,18 @@ async function downloadSgeWorkbook() {
     const brDate = value => value.split('-').reverse().join('/');
     let headers, row;
     if (quarter) {
-      headers = ['ID', 'Turma', 'Período', 'Data Inicial', 'Data Final', 'Data limite', 'Conteúdo do Período', 'Ação', 'Status', 'Situação no SGE'];
-      row = [`PTR-${turma}-${$('#sgeQuarter').value}`, turma, `${$('#sgeQuarter').value}º Trimestre`, '', '', '', values[0], 'Criar', 'Revisar', ''];
+      headers = ['ID', 'Turma', 'Período', 'Data Inicial', 'Data Final', 'Data limite', 'Conteúdo do Período', 'Status', 'Situação no SGE'];
+      row = [`PTR-${turma}-${$('#sgeQuarter').value}`, turma, `${$('#sgeQuarter').value}º Trimestre`, '', '', '', values[0], 'Revisar', ''];
     } else {
       const start = $('#sgeStart').value, end = $('#sgeEnd').value;
       if (!start || !end || end < start) throw new Error('Informe um intervalo válido.');
       const lessons = Number($('#sgeLessons').value);
       if (!Number.isInteger(lessons) || lessons < 1) throw new Error('Informe uma quantidade inteira de aulas.');
-      headers = ['ID', 'Turma', 'Data Inicial', 'Data Final', 'Nº de aulas', ...SGE_FIELDS, 'Habilidades', 'Ação', 'Status', 'Situação no SGE', 'Sequência no SGE'];
-      row = [`PLA-${turma}-${start.replaceAll('-', '')}`, turma, brDate(start), brDate(end), lessons, ...values, (generatedContext.skills || []).join('\n'), 'Criar', 'Revisar', '', ''];
+      const skillEntries = generatedContext.skills || [];
+      const sgeIds = $$('[data-sge-skill]').map(input => input.value.trim());
+      if (sgeIds.some(code => /^EF\d/i.test(code))) throw new Error('Use identificadores do SGE nos campos Habilidade SGE, não códigos BNCC.');
+      headers = ['ID', 'Turma', 'Data Inicial', 'Data Final', 'Nº de aulas', ...SGE_FIELDS, 'Habilidades', 'Código SGE', 'Habilidade SGE 1', 'Habilidade SGE 2', 'Habilidade SGE 3', 'Habilidade SGE 4', 'Habilidade SGE 5', 'Status', 'Situação no SGE', 'Sequência no SGE'];
+      row = [`PLA-${turma}-${start.replaceAll('-', '')}`, turma, brDate(start), brDate(end), lessons, ...values, skillEntries.map(String).join('\n'), '', ...sgeIds, ...Array(Math.max(0, 5 - sgeIds.length)).fill(''), 'Revisar', '', ''];
     }
     if (row.some(value => String(value).length > 32767)) throw new Error('Um campo excede 32.767 caracteres. Resuma esse campo para exportar.');
     const { buildWorkbook } = await import('./sge-workbook.mjs');
@@ -56,6 +65,9 @@ async function downloadSgeWorkbook() {
 document.addEventListener('DOMContentLoaded', () => {
   $('#exportSge').addEventListener('click', openSgeExport);
   $('#downloadSge').addEventListener('click', downloadSgeWorkbook);
+  $('#sgeConfirmed').addEventListener('change', event => { $('#downloadSge').disabled = !event.target.checked; });
+  $('#sgeFields').addEventListener('input', () => { $('#sgeConfirmed').checked = false; $('#downloadSge').disabled = true; });
+  $('#sgeClass').addEventListener('input', () => { $('#sgeConfirmed').checked = false; $('#downloadSge').disabled = true; });
   $$('[data-close-sge]').forEach(button => button.addEventListener('click', () => hideModalElement($('#sgeModal'))));
   $('#planDocument').addEventListener('input', () => {
     if (supervisorReport) { supervisorReport = {status: 'stale', text: 'O documento foi editado depois da análise. O parecer anterior não valida esta versão.'}; renderSupervisorReport(); }

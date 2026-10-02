@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="carijo-release" content="2026-10-02-editor-versoes-etapa-2" />
+  <meta name="carijo-release" content="2026-10-02-exportacoes-etapa-3" />
   <meta name="description" content="Carijó — planejamento pedagógico para professores da Rede Municipal de Florianópolis." />
   <meta name="referrer" content="no-referrer" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://zfztuvkrejskelaomoan.supabase.co wss://zfztuvkrejskelaomoan.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'" />
@@ -584,6 +584,7 @@
       <label class="auth-field">Número da turma no SGE<input id="sgeClass" inputmode="numeric" placeholder="Ex.: 71" /></label>
       <div id="sgeFields"></div>
       <p id="sgeFeedback" role="status"></p>
+      <label class="sge-review-confirmation"><input id="sgeConfirmed" type="checkbox" /> Conferi a turma, o período e os campos deste planejamento.</label>
       <button class="primary-button" id="downloadSge">Baixar planilha .xlsx</button>
     </div>
   </div>
@@ -607,6 +608,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3"></script>
   <script src="app.js"></script>
   <script src="document-editor.js"></script>
+  <script type="module" src="export-ui.mjs"></script>
   <script src="sge-ui.js"></script>
 </body>
 </html>
