@@ -28,4 +28,9 @@ for(const name of ['assessment-ui.mjs','correction-ui.mjs','admin-ui.mjs']){
 }
 nodes.get('#assessmentMaximum').value='10';nodes.get('#activityClassSelect').value='1';nodes.get('#activityQuarter').value='2';nodes.get('#activityType').value='formative';
 await context.window.CarijoAssessments.generate();assert.equal(saved,1);assert.equal(context.window.CarijoAssessments.current().questions.length,1);assert.equal(context.window.CarijoAssessments.current().approved,false);assert(context.window.CarijoCorrections.open);assert.equal(context.generationInProgress,false);assert(!nodes.get('#activityAIText').innerHTML.includes('Uso do professor'));
+nodes.get('#rosterGroup').value='123';nodes.get('#rosterText').value='001;Maria';nodes.get('#rosterApply').onclick();
+nodes.get('#rosterGroup').value='456';nodes.get('#rosterText').value='002;João';nodes.get('#rosterApply').onclick();
+assert(nodes.get('#correctionStudent').innerHTML.includes('João'));assert(!nodes.get('#correctionStudent').innerHTML.includes('Maria'));
+nodes.get('#correctionGroup').onchange({target:{value:'123'}});assert(nodes.get('#correctionStudent').innerHTML.includes('Maria'));assert(!nodes.get('#correctionStudent').innerHTML.includes('João'));
+assert.equal(JSON.parse(memory.get('carijo-corrections-local-v1')).roster.length,2);
 console.log('Inicialização dos espaços de avaliação, correção e administração e geração estruturada verificadas com DOM simulado.');

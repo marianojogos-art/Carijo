@@ -6,7 +6,7 @@
 - Questões objetivas, abertas e tarefas com rubricas; pontuações e respostas editáveis. Respostas esperadas não aparecem no material do estudante.
 - Gabarito separado para o professor, folha de respostas para leitura óptica e variantes com alternativas embaralhadas sem nova chamada à IA.
 - Aprovação explícita do gabarito, invalidada após edições. Folhas antigas são rejeitadas quando a avaliação ou o gabarito muda.
-- Cadastro por matrícula e nome, importação das abas `Notas T…` do Assistente SGE e folhas com código identificador do estudante.
+- Cadastro por matrícula e nome, separado por turma, importação com escolha da aba `Notas T…` do Assistente SGE e folhas com código identificador do estudante. O código também verifica a matrícula, evitando a reutilização acidental de um identificador para outra pessoa.
 - Leitura local pela câmera ou foto, quatro marcas de alinhamento, ajuste de orientação e marcação manual dos cantos. Respostas duplas, em branco e incertas exigem conferência.
 - Questões abertas com rubrica e pontos atribuídos pelo professor. OCR local opcional para auxiliar na transcrição, sem nota automática e sem enviar imagens à IA.
 - Correções confirmadas, reabertura, exclusão, cópia local de segurança e prévia das notas antes de exportar XLSX. Matrículas preservadas como texto; status inicial “Revisar”. Nenhum envio ao SGE.
@@ -43,4 +43,4 @@ Faltam duas configurações humanas: indicar a conta administrativa e registrar 
 
 ## Testes
 
-Executar os testes existentes de `package.json` e os novos `tests/assessments.mjs`, `tests/admin-security.mjs` e `tests/public-generation.mjs`. Os testes usam modelos simulados e não consomem créditos, exceto a chamada real manual descrita acima.
+Executar os testes existentes de `package.json` e os novos `tests/assessments.mjs`, `tests/admin-security.mjs`, `tests/workspace-loading.mjs`, `tests/roster-import.mjs` e `tests/public-generation.mjs`. Os testes usam modelos simulados e não consomem créditos, exceto a chamada real manual descrita acima.

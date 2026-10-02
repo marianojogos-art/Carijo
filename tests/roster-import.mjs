@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {rosterFromWorkbook} from '../local-readers.mjs';
+const book={SheetNames:['Notas T123','Notas T456'],Sheets:{'Notas T123':[['Turma','123','Notas por avaliação'],[],[],[],[],['Matrícula','Estudante','Avaliação 1'],['001','Maria',8]],'Notas T456':[['Turma','456','Notas por avaliação'],[],[],[],[],['Matrícula','Estudante','Avaliação 1'],['002','João',9]]}};
+globalThis.window={XLSX:{read:()=>book,utils:{sheet_to_json:sheet=>sheet}}};
+const file={size:100,arrayBuffer:async()=>new ArrayBuffer(0)};
+const first=await rosterFromWorkbook(file);assert.equal(first.turma,'123');assert.equal(first.students.length,1);assert.equal(first.students[0].registration,'001');
+const second=await rosterFromWorkbook(file,'Notas T456');assert.equal(second.turma,'456');assert.equal(second.students[0].name,'João');assert.equal(second.students.length,1);
+await assert.rejects(()=>rosterFromWorkbook(file,'Inexistente'));
+await assert.rejects(()=>rosterFromWorkbook({...file,size:11e6}));
+console.log('Importação de estudantes: seleção explícita de turma, preservação da matrícula e limites testados.');
