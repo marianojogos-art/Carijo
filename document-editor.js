@@ -52,7 +52,7 @@ if (typeof document !== "undefined") (() => {
     const text = target.innerText.trim();
     if (checkpoint) session.versions = CarijoVersions.append(session.versions, html, text, label);
     return { ...session.meta, id: undefined, user_id: null, document_html: html,
-      plan_data: { ...session.meta.plan_data, versions: session.versions, editorVersion: 2, documentText: text,
+      plan_data: { ...session.meta.plan_data, ...(session.kind === "activity" ? {assessment: window.CarijoAssessments?.current() || null} : {}), versions: session.versions, editorVersion: 2, documentText: text,
         savedAt: new Date().toISOString(), cloudId: session.cloudId || null, cloudOwner: session.owner || null } };
   }
   function localWrite(session, payload) {

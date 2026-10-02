@@ -870,3 +870,38 @@ input, select, textarea { color: var(--ink); }
 .sge-review-confirmation input { width:auto!important; flex:0 0 auto; accent-color:#38533b; }
 .sge-secondary { margin:18px 0; padding:14px; border:1px solid #d7d3c8; border-radius:10px; }
 .sge-secondary p { font-size:13px; line-height:1.6; }
+:root { --workspace-border: #dfd4c4; }
+.professional-workspace { max-width:1120px; margin:0 auto; padding:48px 32px 90px; }
+.professional-workspace h1 { font-family:'DM Serif Display',serif; font-size:clamp(32px,4vw,52px); line-height:1.12; margin:24px 0; }
+.professional-workspace h1 em { color:#805b3e; font-weight:400; }
+.professional-workspace p { line-height:1.7; }
+.workspace-card,.workspace-details,.assessment-editor { background:#fffdf7; border:1px solid var(--workspace-border); border-radius:18px; padding:24px; margin:24px 0; }
+.workspace-details summary,.question-editor summary { cursor:pointer; font-weight:700; padding:8px 0; }
+.workspace-controls { display:flex; flex-wrap:wrap; gap:12px; align-items:end; margin:20px 0; }
+.workspace-controls label { min-width:140px; }
+.workspace-table-scroll { overflow:auto; margin:20px 0; }
+.workspace-table { width:100%; border-collapse:collapse; font-size:14px; }
+.workspace-table th { background:#efe8dc; text-align:left; }
+.workspace-table td,.workspace-table th { border-bottom:1px solid var(--workspace-border); padding:14px 12px; white-space:nowrap; }
+.workspace-metrics,.metric-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; }
+.metric-card { padding:24px; background:#fffdf7; border:1px solid var(--workspace-border); border-radius:14px; }
+.metric-card strong { display:block; font-size:26px; margin:8px 0; }
+.question-editor { padding:16px; border:1px solid var(--workspace-border); border-radius:12px; margin:12px 0; }
+.question-editor fieldset { border:1px solid var(--workspace-border); margin:12px 0; padding:16px; }
+.question-editor label,.assessment-editor label,.professional-workspace label { display:flex; flex-direction:column; gap:8px; margin:12px 0; font-weight:500; }
+.question-editor textarea,.assessment-editor textarea,.professional-workspace textarea { min-height:100px; }
+.approval-row { flex-direction:row!important; align-items:center; background:#f1f5e9; padding:18px; border-radius:12px; }
+.approval-row input { width:20px; height:20px; flex:none; }
+#correctionCanvas,#correctionVideo { max-width:100%; max-height:640px; display:block; margin:20px auto; border-radius:12px; }
+#correctionCanvas[hidden],#correctionVideo[hidden] { display:none; }
+.assessment-question { break-inside:avoid; margin:24px 0; }
+.admin-nav { margin:16px 8px; }
+.assessment-preview { width:min(1000px,95vw); max-height:92dvh; padding:24px; overflow:auto; border-radius:16px; }
+.assessment-preview::backdrop { background:rgba(25,31,24,.55); }
+.assessment-preview .preview-actions { display:flex; align-items:center; flex-wrap:wrap; gap:14px; margin-bottom:16px; }
+.assessment-preview .preview-actions strong { flex:1; }
+.assessment-preview iframe { width:100%; height:65dvh; background:white; border:1px solid var(--workspace-border); }
+.professional-workspace input:not([type=checkbox]),.professional-workspace select,.professional-workspace textarea,.assessment-editor input:not([type=checkbox]),.assessment-editor select,.assessment-editor textarea { width:100%; min-height:44px; padding:12px; background:#fffaf1; border:1px solid var(--workspace-border); border-radius:9px; font-size:14px; color:var(--ink); }
+.professional-workspace label,.assessment-editor label,.professional-workspace .field-grid label { font-size:14px; text-transform:none; letter-spacing:0; }
+.professional-workspace input[type=file] { padding:6px; background:transparent; border:0; }
+@media(max-width:650px) { .professional-workspace { padding:24px 16px 64px; }.workspace-card,.workspace-details,.assessment-editor { padding:16px; }.workspace-controls { align-items:stretch; }.workspace-controls button { flex:1; } }

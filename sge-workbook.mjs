@@ -17,7 +17,7 @@ function columnName(index) {
   return result;
 }
 
-function worksheetXml(rows, widths = [], validations = []) {
+function worksheetXml(rows, widths = [], validations = [], headerRow = 0) {
   const maxCols = Math.max(1, ...rows.map((row) => row.length));
   const maxRows = Math.max(1, rows.length);
   const cols = widths.length
@@ -26,7 +26,7 @@ function worksheetXml(rows, widths = [], validations = []) {
   const sheetRows = rows.map((row, rowIndex) => {
     const cells = row.map((value, colIndex) => {
       const ref = `${columnName(colIndex)}${rowIndex + 1}`;
-      const style = rowIndex === 0 ? ' s="1"' : '';
+      const style = rowIndex === headerRow ? ' s="1"' : '';
       if (typeof value === 'number' && Number.isFinite(value)) return `<c r="${ref}"${style}><v>${value}</v></c>`;
       return `<c r="${ref}" t="inlineStr"${style}><is><t xml:space="preserve">${xmlEscape(value)}</t></is></c>`;
     }).join('');
@@ -37,11 +37,11 @@ function worksheetXml(rows, widths = [], validations = []) {
     : '';
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>
+  <sheetViews><sheetView workbookViewId="0"><pane ySplit="${headerRow+1}" topLeftCell="A${headerRow+2}" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>
   <sheetFormatPr defaultRowHeight="18"/>
   ${cols}
   <sheetData>${sheetRows}</sheetData>
-  <autoFilter ref="A1:${columnName(maxCols - 1)}${maxRows}"/>
+  <autoFilter ref="A${headerRow+1}:${columnName(maxCols - 1)}${maxRows}"/>
   ${validationXml}
   <pageMargins left="0.3" right="0.3" top="0.5" bottom="0.5" header="0.2" footer="0.2"/>
 </worksheet>`;
@@ -160,7 +160,7 @@ ${sheets.map((_, index) => `<Relationship Id="rId${index + 1}" Type="http://sche
     { name: 'docProps/core.xml', data: core }, { name: 'docProps/app.xml', data: app },
     { name: 'xl/workbook.xml', data: workbook }, { name: 'xl/_rels/workbook.xml.rels', data: workbookRels },
     { name: 'xl/styles.xml', data: styles },
-    ...sheets.map((sheet, index) => ({ name: `xl/worksheets/sheet${index + 1}.xml`, data: worksheetXml(sheet.rows, sheet.widths, sheet.validations || []) }))
+    ...sheets.map((sheet, index) => ({ name: `xl/worksheets/sheet${index + 1}.xml`, data: worksheetXml(sheet.rows, sheet.widths, sheet.validations || [], sheet.headerRow || 0) }))
   ];
 }
 export function buildWorkbook(sheets) { return zipStore(workbookFiles(sheets)); }

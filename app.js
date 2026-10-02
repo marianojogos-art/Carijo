@@ -270,7 +270,7 @@ function storeDeviceDocument(payload) {
   currentPlanId = id;
   return item;
 }
-async function invokeFreeGeneration(prompt, requestType) {
+async function invokeFreeGeneration(prompt, requestType, options = {}) {
   try {
     let sessionId = sessionStorage.getItem("carijo-generation-session");
     if (!sessionId) { sessionId = crypto.randomUUID(); sessionStorage.setItem("carijo-generation-session", sessionId); }
@@ -278,7 +278,7 @@ async function invokeFreeGeneration(prompt, requestType) {
     const session = supabaseClient ? (await supabaseClient.auth.getSession()).data.session : null;
     if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
     const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-plan-public`, {
-      method: "POST", headers, body: JSON.stringify({ prompt, requestType, sessionId }),
+      method: "POST", headers, body: JSON.stringify({ prompt, requestType, sessionId, outputFormat: options.outputFormat }),
     });
     const data = await response.json();
     if (!response.ok) throw new Error(response.status === 404 ? "A função de geração livre ainda aguarda publicação. As escolhas estão preservadas; editar e consultar documentos continua disponível." : data.error || "Não foi possível gerar agora.");
@@ -1117,6 +1117,7 @@ function generatedTextToHtml(value) {
 }
 
 async function buildActivityProposal() {
+  if (window.CarijoAssessments) return window.CarijoAssessments.generate();
   const item = state.classes.find(entry => entry.id === Number($("#activityClassSelect").value)) || state.classes[0];
   if (!item) return;
   if (!await confirmGeneration()) return;
@@ -1706,6 +1707,7 @@ function openSavedDocument(plan) {
     $("#activityOutput").classList.remove("hidden");
     showScreen("activityBuilder");
     window.CarijoEditor?.open(plan, "activity");
+    window.CarijoAssessments?.restore(plan.plan_data?.assessment || null);
     $("#activityOutput").scrollIntoView({ block: "start" });
     return;
   }
@@ -2275,7 +2277,7 @@ function clearLocalData() {
 function initializeHomeActions() {
   $$("[data-start]").forEach(button => button.addEventListener("click", () => openQuickStart(button.dataset.start)));
   $("#homeDocuments").addEventListener("click", openHistory);
-  $("#homeCorrection").addEventListener("click", () => showModalElement($("#correctionInfoModal")));
+  $("#homeCorrection").addEventListener("click", () => window.CarijoCorrections ? window.CarijoCorrections.open() : showModalElement($("#correctionInfoModal")));
   $$('[data-close-correction]').forEach(button => button.addEventListener("click", () => hideModalElement($("#correctionInfoModal"))));
   $$('[data-close-quick]').forEach(button => button.addEventListener("click", () => hideModalElement($("#quickStartModal"))));
   $("#quickClass").addEventListener("change", () => $("#quickNewFields").classList.toggle("hidden", $("#quickClass").value !== "new"));

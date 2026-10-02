@@ -1,0 +1,35 @@
+import assert from 'node:assert/strict';
+import {validateAssessment,gradeAssessment,assessmentStudentHtml} from '../assessment-model.mjs';
+import {SHEET,encodeCard,decodeCard,scanSheet,fingerprint,homography,answerSheetSvg} from '../omr.mjs';
+import {summarizeUsage} from '../admin-metrics.mjs';
+import {buildWorkbook} from '../sge-workbook.mjs';
+const a={...validateAssessment({title:'Teste',instructions:'Leia.',teacherNotes:'SEGREDO PROFESSOR',accessibility:'Leitura mediada.',questions:[{type:'multiple_choice',prompt:'Quanto é 2 + 2?',options:['3','4','5'],correctIndex:1,expectedAnswer:'SEGREDO RESPOSTA',skill:'Adição',difficulty:'easy',points:2,rubric:[]},{type:'open',prompt:'Explique.',options:[],correctIndex:-1,expectedAnswer:'SEGREDO RESPOSTA',skill:'Argumentar',difficulty:'medium',points:3,rubric:[{criterion:'Explicação',points:3,description:'Justifica o resultado.'}]}]}),id:'test-assessment',maximum:10};
+assert.equal(gradeAssessment(a,{q1:1,q2:3}).score,10);
+assert.equal(gradeAssessment(a,{q1:0,q2:1.5}).score,3);
+assert.equal(gradeAssessment(a,{q1:'blank',q2:0}).score,0);
+assert.equal(gradeAssessment(a,{q1:null,q2:3}).score,null);
+assert.equal(gradeAssessment(a,{q1:1,q2:3},10,true).score,null);
+assert.equal(gradeAssessment(a,{q1:1,q2:4}).pending,true);
+const esc=s=>String(s).replace(/</g,'&lt;');assert(!assessmentStudentHtml(a,esc).includes('SEGREDO'));
+assert.throws(()=>validateAssessment({...a,questions:[{...a.questions[0],correctIndex:6}]}));
+assert.throws(()=>validateAssessment({...a,questions:[{...a.questions[1],points:4}]}));
+const bits=encodeCard(a,123);assert.equal(decodeCard(bits,a),123);
+const damaged=[...bits];damaged[0]^=1;assert.throws(()=>decodeCard(damaged,a));
+assert.throws(()=>decodeCard(bits,{...a,id:'other'}));
+assert.equal(decodeCard(encodeCard(a,{machineId:123,registration:'001'}),a,'001'),123);
+assert.throws(()=>decodeCard(encodeCard(a,{machineId:123,registration:'001'}),a,'002'));
+assert.notEqual(fingerprint(a),fingerprint({...a,questions:[{...a.questions[0],correctIndex:0},a.questions[1]]}));
+assert(!answerSheetSvg(a,{machineId:123,name:'<script>',registration:'001'}).includes('<script>'));
+const image={width:800,height:1100,data:new Uint8ClampedArray(800*1100*4).fill(255)};
+function black(x,y,w,h){for(let dy=0;dy<h;dy++)for(let dx=0;dx<w;dx++){const p=((y+dy)*800+x+dx)*4;image.data[p]=image.data[p+1]=image.data[p+2]=0;}}
+for(const[x,y]of SHEET.corners)black(x-16,y-16,32,32);bits.forEach((bit,i)=>{if(bit)black(208+(i%48)*8,150+Math.floor(i/48)*16,6,10);});black(324,214,12,12);
+let scan=scanSheet(image,a);assert.equal(scan.student,123);assert.equal(scan.answers[0].answer,1);
+black(244,214,12,12);scan=scanSheet(image,a);assert.equal(scan.answers[0].state,'multiple');assert.equal(scan.answers[0].answer,null);
+const map=homography(SHEET.corners,[[80,60],[720,100],[760,1000],[60,1040]]);SHEET.corners.forEach(([x,y],i)=>{const p=map(x,y),expected=[[80,60],[720,100],[760,1000],[60,1040]][i];assert(Math.abs(p[0]-expected[0])<1e-6&&Math.abs(p[1]-expected[1])<1e-6);});
+const destination=[[80,60],[720,100],[760,1000],[60,1040]],inverse=homography(destination,SHEET.corners),warped={width:800,height:1100,data:new Uint8ClampedArray(image.data.length).fill(255)};
+for(let y=0;y<1100;y++)for(let x=0;x<800;x++){const[u,v]=inverse(x,y),sx=Math.round(u),sy=Math.round(v);if(sx>=0&&sx<800&&sy>=0&&sy<1100){const source=(sy*800+sx)*4,target=(y*800+x)*4;for(let c=0;c<3;c++)warped.data[target+c]=image.data[source+c];}}
+assert.equal(scanSheet(warped,a,destination).student,123);assert.equal(scanSheet(warped,a,destination).answers[0].state,'multiple');
+const s=summarizeUsage([{created_at:'2026-10-02T02:00:00Z',model:'m',user_id:'u',status:'succeeded',input_tokens:100,output_tokens:20,cached_input_tokens:40,estimated_cost_usd:.02,usage_complete:true},{created_at:'2026-10-02T12:00:00Z',model:'m',status:'failed',input_tokens:null,output_tokens:null,estimated_cost_usd:null,usage_complete:false}],5);
+assert.equal(s.requests,2);assert.equal(s.unknownCost,1);assert.equal(s.partialUsage,1);assert.equal(s.knownCostUsd,.02);assert.equal(s.knownCostBrl,.1);assert.equal(s.users.length,2);assert.equal(s.days[0].id,'2026-10-01');
+const book=buildWorkbook([{name:'Notas T1',headerRow:5,rows:[['Turma','1'],['ID','','real-id'],[],[],[],['Matrícula','Estudante','Avaliação 1'],['001','Maria',8]]}]);const xml=new TextDecoder().decode(book);assert(xml.includes('ySplit="6"'));assert(xml.includes('autoFilter ref="A6:C7"'));assert(xml.includes('<t xml:space="preserve">001</t>'));
+console.log('Avaliações: validação, rubricas, privacidade, notas, códigos, folha sintética, ambiguidade, alinhamento, custos e planilha testados.');

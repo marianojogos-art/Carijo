@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="carijo-release" content="2026-10-02-exportacoes-etapa-3" />
+  <meta name="carijo-release" content="2026-10-02-avaliacoes-etapa-4" />
   <meta name="description" content="Carijó — planejamento pedagógico para professores da Rede Municipal de Florianópolis." />
   <meta name="referrer" content="no-referrer" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://zfztuvkrejskelaomoan.supabase.co wss://zfztuvkrejskelaomoan.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://cdn.jsdelivr.net https://tessdata.projectnaptha.com https://zfztuvkrejskelaomoan.supabase.co wss://zfztuvkrejskelaomoan.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'" />
   <title>Carijó</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -76,7 +76,7 @@
           <div class="home-actions" aria-label="O que deseja fazer?">
             <button class="home-action" data-start="plan"><span class="home-action-icon" aria-hidden="true">↗</span><strong>Criar planejamento</strong><span>Trimestral ou quinzenal, com suas escolhas e revisão pedagógica.</span><small>Começar →</small></button>
             <button class="home-action" data-start="activity"><span class="home-action-icon" aria-hidden="true">≡</span><strong>Criar atividade ou avaliação</strong><span>Escolha o formato, as habilidades e as condições da sua aula.</span><small>Começar →</small></button>
-            <button class="home-action" id="homeCorrection"><span class="home-action-icon" aria-hidden="true">◎</span><strong>Corrigir avaliação</strong><span>Leitura por câmera e apoio à correção dissertativa.</span><small>Conhecer a próxima etapa →</small></button>
+            <button class="home-action" id="homeCorrection"><span class="home-action-icon" aria-hidden="true">◎</span><strong>Corrigir avaliação</strong><span>Leitura por câmera e apoio à correção dissertativa.</span><small>Abrir central de correção →</small></button>
             <button class="home-action" id="homeDocuments"><span class="home-action-icon" aria-hidden="true">▦</span><strong>Meus documentos</strong><span>Abra os trabalhos salvos neste dispositivo ou na sua conta.</span><small>Continuar →</small></button>
           </div>
           <details class="home-details"><summary>A nuvem manda a conta: como funciona o acesso</summary><section class="cost-manifesto" aria-labelledby="costManifestoTitle">
@@ -598,6 +598,7 @@
       <p><strong>Geração por IA.</strong> O pedido pedagógico é enviado à API da OpenAI para produzir o documento. Não escreva nomes, diagnósticos, contatos ou qualquer dado que identifique estudantes.</p>
       <p><strong>Histórico.</strong> Sem conta, os documentos que você salva ficam neste navegador. A conta opcional permite salvar documentos na nuvem e acessá-los em outros dispositivos, com acesso restrito ao titular.</p>
       <p><strong>Consumo.</strong> O servidor registra tipo de pedido, estado, uso de tokens e custo estimado quando configurado. O registro de consumo não guarda o texto do planejamento.</p>
+      <p><strong>Correção de avaliações.</strong> Cadastro de estudantes, fotos, transcrições e notas ficam neste navegador e não são enviados à IA ou à nuvem. Cópias de segurança baixadas contêm dados pessoais. Em computadores compartilhados, apague os dados locais ao terminar.</p>
       <p><strong>Exclusão.</strong> Você pode apagar os dados locais separadamente ou excluir turmas, configurações, histórico e registros de uso armazenados na nuvem.</p>
       <p><strong>Responsabilidade.</strong> O resultado é um rascunho automatizado. Cabe ao professor revisar a adequação pedagógica, curricular e ética antes do uso.</p>
       <div class="modal-actions"><button class="primary-button" data-close-privacy>Entendi e continuarei sem nomes de estudantes</button></div>
@@ -609,6 +610,9 @@
   <script src="app.js"></script>
   <script src="document-editor.js"></script>
   <script type="module" src="export-ui.mjs"></script>
+  <script type="module" src="assessment-ui.mjs"></script>
+  <script type="module" src="correction-ui.mjs"></script>
+  <script type="module" src="admin-ui.mjs"></script>
   <script src="sge-ui.js"></script>
 </body>
 </html>
