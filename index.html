@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="carijo-release" content="2026-10-02-acesso-livre-etapa-1" />
   <meta name="description" content="Carijó — planejamento pedagógico para professores da Rede Municipal de Florianópolis." />
   <meta name="referrer" content="no-referrer" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://zfztuvkrejskelaomoan.supabase.co wss://zfztuvkrejskelaomoan.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'" />
@@ -23,7 +24,7 @@
       <nav class="steps" aria-label="Etapas do planejamento">
         <button class="step active" data-go="upload">
           <span class="step-number">1</span>
-          <span><strong>Minhas turmas</strong><small>Disciplina, ano e carga horária</small></span>
+          <span><strong>Início</strong><small>Seu próximo trabalho</small></span>
           <span class="step-state">●</span>
         </button>
         <button class="step" data-go="choose">
@@ -33,12 +34,12 @@
         </button>
         <button class="step" data-go="choose">
           <span class="step-number">3</span>
-          <span><strong>Preparar a geração</strong><small>Suas escolhas antes dos verbos da IA</small></span>
+          <span><strong>Personalizar</strong><small>Escolhas pedagógicas e contexto</small></span>
           <span class="step-state">○</span>
         </button>
         <button class="step history-step" id="historyNavButton" type="button">
           <span class="step-number">▦</span>
-          <span><strong>Meu histórico</strong><small>Documentos que sobreviveram à reunião</small></span>
+          <span><strong>Meus documentos</strong><small>Continuar, revisar e exportar</small></span>
           <span class="step-state">→</span>
         </button>
       </nav>
@@ -61,7 +62,7 @@
         <button class="mobile-menu" aria-label="Abrir menu" aria-expanded="false" aria-controls="mainSidebar">☰</button>
         <blockquote class="context-label"><span>“</span><em>Tudo o que não cabe em uma métrica será cuidadosamente ignorado.</em><cite>— ChatGPT</cite></blockquote>
         <div class="top-actions">
-          <button class="usage-pill" id="usagePill" type="button" aria-label="Consultar cota de gerações" title="Cota de gerações"><span>IA</span><b id="usagePillText">cota variável</b></button>
+          <button class="usage-pill" id="usagePill" type="button" aria-label="Informações sobre geração" title="Informações sobre geração"><span>IA</span><b id="usagePillText">acesso livre</b></button>
           <button class="icon-button" id="ironyButton" aria-label="Manifesto irônico sobre IA na educação" title="Manifesto">?</button>
         </div>
       </header>
@@ -71,20 +72,24 @@
           <div class="cover-hero" role="img" aria-label="Gavião-carijó em voo sobre a Mata Atlântica, carregando um sabiá-laranjeira com pequeno chapéu de formatura">
             <div class="cover-hero-copy"><span>GAVIÃO</span><strong>Carijó</strong><p>Você sabia que o sabiá sabia assoviar?</p></div>
           </div>
-          <p class="cultural-note">Um atalho para o texto, não para a docência. O Carijó organiza rascunhos com suas escolhas e a base curricular disponível. Revise conteúdos e referências: a segurança do tom não é certificado de verdade.</p>
-          <section class="cost-manifesto" aria-labelledby="costManifestoTitle">
+          <p class="cultural-note">A máquina organiza o papel. Você conhece a turma. Um planejamento decente precisa da realidade que nenhum botão viveu.</p>
+          <div class="home-actions" aria-label="O que deseja fazer?">
+            <button class="home-action" data-start="plan"><span class="home-action-icon" aria-hidden="true">↗</span><strong>Criar planejamento</strong><span>Trimestral ou quinzenal, com suas escolhas e revisão pedagógica.</span><small>Começar →</small></button>
+            <button class="home-action" data-start="activity"><span class="home-action-icon" aria-hidden="true">≡</span><strong>Criar atividade ou avaliação</strong><span>Escolha o formato, as habilidades e as condições da sua aula.</span><small>Começar →</small></button>
+            <button class="home-action" id="homeCorrection"><span class="home-action-icon" aria-hidden="true">◎</span><strong>Corrigir avaliação</strong><span>Leitura por câmera e apoio à correção dissertativa.</span><small>Conhecer a próxima etapa →</small></button>
+            <button class="home-action" id="homeDocuments"><span class="home-action-icon" aria-hidden="true">▦</span><strong>Meus documentos</strong><span>Abra os trabalhos salvos neste dispositivo ou na sua conta.</span><small>Continuar →</small></button>
+          </div>
+          <details class="home-details"><summary>A nuvem manda a conta: como funciona o acesso</summary><section class="cost-manifesto" aria-labelledby="costManifestoTitle">
             <div class="cost-manifesto-icon" aria-hidden="true">$</div>
             <div>
               <span>SEM FINS LUCRATIVOS NEM ENGORDATIVOS</span>
               <h2 id="costManifestoTitle">A nuvem não aceita pagamento em protagonismo.</h2>
-              <p>A sátira é gratuita; a geração, não. Este projeto sem fins lucrativos nem engordativos paga por cada pedido de IA, que também mobiliza infraestrutura e recursos naturais. A promessa de acesso ilimitado continua muito democrática para quem pode pagar. Por aqui, há uma pequena cota por pessoa — a fatura ainda não aprendeu a ser inclusiva.</p>
-              <p class="usage-explainer">Preparar escolhas, revisar, copiar e imprimir não inicia uma geração. Gerar um documento ou uma nova versão usa a API. Consulte sua cota antes de confirmar.</p>
-              <div class="cost-manifesto-bottom"><strong id="homeUsageStatus">Entre para descobrir quantos pássaros digitais ainda restam na sua cota.</strong><blockquote>“Mais vale um pássaro na mão do que dois voando.” <cite>— PMF</cite></blockquote></div>
+              <p>Acesso gratuito e livre, sem fins lucrativos nem engordativos. Cada geração custa dinheiro ao projeto e mobiliza infraestrutura, energia e recursos naturais. A nuvem parece etérea; a fatura tem excelente materialidade.</p>
+              <p class="usage-explainer">Gerar ou pedir uma nova versão usa a IA. Preparar, editar, copiar e imprimir não gera outra cobrança. Aguarde a conclusão de um pedido antes de iniciar o próximo.</p>
+              <div class="cost-manifesto-bottom"><strong id="homeUsageStatus">Sem cadastro para gerar. Conta opcional para sincronizar seu histórico.</strong><blockquote>“Mais vale um pássaro na mão do que dois voando.” <cite>— PMF</cite></blockquote></div>
             </div>
-          </section>
-          <div class="eyebrow"><span>01</span> OFEREÇA DADOS AO ORÁCULO</div>
-          <h1>Menos formulário.<br><em>Mais tempo de professor.</em></h1>
-          <p class="lead">Comece pela disciplina, pelo ano e pela carga horária. O Carijó cuida do rascunho; a realidade da turma não cabe em três campos.</p>
+          </section></details>
+          <details class="home-details" id="homeClasses"><summary>Minhas turmas · adicionar ou editar</summary>
 
           <div class="manual-entry-card">
             <div class="manual-entry-head"><span>＋</span><div><h2>Adicionar uma turma</h2><p>Três informações para começar. Sem transformar estudantes em unidades de produção.</p></div></div>
@@ -102,6 +107,7 @@
             <div class="manual-empty"><span>◎</span><p>As turmas adicionadas aparecerão aqui.</p></div>
           </div>
           <div class="manual-actions"><p>Você pode editar as turmas antes de gerar. Esta etapa não usa a IA.</p><button class="primary-button" id="manualContinue" disabled>Escolher documento <span>→</span></button></div>
+          </details>
           <div id="uploadError" hidden></div>
         </div>
       </section>
@@ -200,9 +206,9 @@
         <div class="planner-shell activity-shell">
           <div class="planner-head">
             <button class="back-link" data-go="choose">← Voltar</button>
-            <div class="eyebrow"><span>✦</span> ARTESANATO, SÓ QUE EM SÉRIE</div>
+            <div class="eyebrow"><span>✦</span> ATIVIDADES E AVALIAÇÕES</div>
             <h1>Atividades e<br><em>avaliações instantâneas.</em></h1>
-            <p class="lead">Defina o essencial; o resto vira uma proposta com tom seguro e uma quantidade respeitável de verbos.</p>
+            <p class="lead">Defina o formato e o que deseja trabalhar. A proposta precisa da sua leitura da turma para fazer sentido em sala.</p>
           </div>
           <div class="form-flow">
             <section class="form-section">
@@ -211,7 +217,7 @@
                 <h2>Configurações da atividade</h2>
                 <p>Escolha o formato e o tempo disponível. A máquina tem pressa; aprender não é uma corrida de processamento.</p>
                 <div class="field-grid activity-basic-fields">
-                  <label>Nível de ensino<select id="activityLevel"><option>Ensino Fundamental</option><option>Educação Infantil</option><option>Educação de Jovens e Adultos</option></select></label>
+                  <label>Nível de ensino<select id="activityLevel"><option>Ensino Fundamental</option></select></label>
                   <label>Ano / faixa etária<select id="activityGrade"><option value="1">1º ano</option><option value="2">2º ano</option><option value="3">3º ano</option><option value="4">4º ano</option><option value="5">5º ano</option><option value="6">6º ano</option><option value="7" selected>7º ano</option><option value="8">8º ano</option><option value="9">9º ano</option></select></label>
                   <label>Tipo de atividade<select id="activityType"><option value="activity">Atividade de aprendizagem</option><option value="formative">Avaliação formativa</option><option value="diagnostic">Avaliação diagnóstica</option><option value="both">Atividade com avaliação integrada</option></select></label>
                   <label>Formato da prova / atividade<select id="activityFormat"><option>Trabalho individual</option><option>Trabalho em grupo</option><option>Lista de exercícios</option><option>Estudo dirigido</option><option>Produção textual</option><option>Prova objetiva (múltipla escolha)</option><option>Prova dissertativa</option><option>Prova mista</option><option>Quiz</option><option>Seminário ou apresentação oral</option><option>Debate ou roda de conversa</option><option>Projeto</option><option>Portfólio</option><option>Mapa mental ou conceitual</option><option>Experimento e relatório</option><option>Pesquisa de campo</option><option>Produção artística</option><option>Autoavaliação</option><option>Observação com rubrica</option><option>Bilhete de saída</option></select></label>
@@ -228,12 +234,14 @@
                 <div class="field-grid">
                   <label>Turma<select id="activityClassSelect"></select></label>
                   <label>Trimestre<select id="activityQuarter"><option value="1">1º trimestre</option><option value="2">2º trimestre</option><option value="3">3º trimestre</option></select></label>
-                  <label>Recurso principal<select id="activityResource"><option>Quadro e materiais de escrita</option><option>Materiais impressos</option><option>Projetor multimídia</option><option>Materiais manipuláveis</option><option>Espaço externo da escola</option><option>Chromebooks e internet</option></select></label>
                 </div>
                 <div class="activity-skills-block"><div class="label-title">HABILIDADES DA MATRIZ <span>selecione uma ou mais</span></div><div class="activity-skill-list" id="activitySkillList"></div></div>
-                <div class="subject-profile-card activity-profile-card" id="activityProfileCard" aria-live="polite"><small>PERFIL DISCIPLINAR</small><strong id="activityProfileTitle">Componente curricular</strong><p id="activityProfileFocus"></p><span id="activityProfileContents"></span></div>
-                <label class="full-field activity-theme">Tema, conteúdo ou desafio<textarea id="activityTheme" placeholder="Ex.: jogos cooperativos, frações no cotidiano, mudanças no bairro…"></textarea></label>
-                <label class="full-field">Objetivo ou habilidade (opcional)<input id="activityGoal" type="text" placeholder="Ex.: comparar estratégias para resolver problemas" /></label>
+                <details class="activity-personalization"><summary>Personalizar · recursos, tema e objetivo</summary>
+                  <label>Recurso principal<select id="activityResource"><option>Quadro e materiais de escrita</option><option>Materiais impressos</option><option>Projetor multimídia</option><option>Materiais manipuláveis</option><option>Espaço externo da escola</option><option>Chromebooks e internet</option></select></label>
+                  <div class="subject-profile-card activity-profile-card" id="activityProfileCard" aria-live="polite"><small>PERFIL DISCIPLINAR</small><strong id="activityProfileTitle">Componente curricular</strong><p id="activityProfileFocus"></p><span id="activityProfileContents"></span></div>
+                  <label class="full-field activity-theme">Tema, conteúdo ou desafio<textarea id="activityTheme" placeholder="Ex.: jogos cooperativos, frações no cotidiano, mudanças no bairro…"></textarea></label>
+                  <label class="full-field">Objetivo ou habilidade (opcional)<input id="activityGoal" type="text" placeholder="Ex.: comparar estratégias para resolver problemas" /></label>
+                </details>
               </div>
             </section>
             <div class="generate-row"><button class="primary-button large" id="generateActivity">Gerar instrumento completo <span>✦</span></button></div>
@@ -290,7 +298,7 @@
               <section class="form-section">
                 <div class="form-number">2</div>
                 <div class="form-body">
-                  <h2 id="skillsHeading">Habilidades para o ritual</h2>
+                  <h2 id="skillsHeading">Habilidades do planejamento</h2>
                   <p id="skillsDescription">Escolha o que será devidamente mencionado no período.</p>
                   <div class="skills-toolbar"><button class="chip active" data-filter="all">Todas</button><button class="chip" data-filter="oficial">Matriz RMEF 2026</button><button class="chip" data-filter="manual">Incluídas manualmente</button><span id="skillCount">0 selecionadas</span></div>
                   <details class="previous-skills"><summary>Retomar habilidades de trimestres anteriores</summary><p>Carregue o trimestre e selecione as habilidades que deseja retomar.</p><div id="previousTrimesters"></div></details>
@@ -299,7 +307,7 @@
                 </div>
               </section>
 
-              <section class="form-section">
+              <details class="form-section personalization-section"><summary>Personalizar · abordagens, recursos e realidade da turma</summary>
                 <div class="form-number">3</div>
                 <div class="form-body">
                   <h2>Abordagens e condições de trabalho</h2>
@@ -347,7 +355,7 @@
                   <label class="full-field">Tema, contexto ou observação (opcional)<textarea id="teacherNotes" placeholder="Ex.: relacionar com o bairro da escola, considerar a saída de campo já agendada…"></textarea></label>
                   <div class="reference-bank"><div class="label-title">BANCO DE REFERÊNCIAS <span>fontes sugeridas para este componente</span></div><div id="referenceChoices" class="reference-choices"></div><label class="reference-manual">Adicionar referência própria<input id="manualReference" type="text" placeholder="Autor, título, editora/periódico e ano" /></label></div>
                 </div>
-              </section>
+              </details>
 
               <div class="generate-row">
                 <button class="secondary-button" id="previewPrompt">Ver prompt</button>
@@ -494,7 +502,8 @@
         <button class="text-button danger-button" id="clearData">Apagar dados deste dispositivo</button>
         <button class="text-button" id="privacyButton">Privacidade e uso da IA</button>
       </div>
-      <p class="data-footnote">No acesso livre, uma sessão técnica deste navegador protege seus dados e sua cota sem pedir e-mail nem senha. O backup continua disponível para quando a nuvem decidir que também precisa de um plano B.</p>
+      <p class="data-footnote">Você pode gerar sem conta. Entre apenas se quiser sincronizar documentos entre dispositivos. O backup é sua cópia portátil.</p>
+      <button class="secondary-button" id="optionalLogin">Entrar para sincronizar histórico</button>
     </div>
   </div>
 
@@ -510,6 +519,49 @@
     </div>
   </div>
 
+  <div class="modal" id="quickStartModal" aria-hidden="true">
+    <div class="modal-backdrop" data-close-quick></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="quickStartTitle">
+      <button class="modal-close" data-close-quick aria-label="Fechar">×</button>
+      <h2 id="quickStartTitle">Começar um planejamento</h2>
+      <p>Escolha uma turma existente ou informe o essencial. Não é necessário cadastrá-la antes.</p>
+      <div class="field-grid">
+        <label class="full-field">Turma<select id="quickClass"><option value="new">Informar disciplina e ano agora</option></select></label>
+      </div>
+      <div class="field-grid" id="quickNewFields">
+        <label>Disciplina<select id="quickSubject"></select></label>
+        <label id="quickOtherField" class="hidden">Outra disciplina<input id="quickOther" maxlength="120" /></label>
+        <label>Ano<select id="quickGrade"></select></label>
+        <label>Aulas por semana<input id="quickLessons" type="number" value="3" min="1" max="30" /></label>
+      </div>
+      <p id="quickStartError" role="alert"></p>
+      <div class="modal-actions"><button class="primary-button" id="quickContinue">Continuar →</button></div>
+    </div>
+  </div>
+  <div class="modal" id="correctionInfoModal" aria-hidden="true">
+    <div class="modal-backdrop" data-close-correction></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="correctionInfoTitle">
+      <button class="modal-close" data-close-correction aria-label="Fechar">×</button>
+      <h2 id="correctionInfoTitle">Correção de avaliações</h2>
+      <p>Esta função será entregue numa próxima etapa: leitura de gabaritos por câmera, reconhecimento de texto e sugestão de pontuação para respostas dissertativas.</p>
+      <p>Você já pode criar avaliações, editar o material e imprimir. A leitura automática ainda não está disponível.</p>
+      <div class="modal-actions"><button class="primary-button" data-close-correction>Entendi</button></div>
+    </div>
+  </div>
+  <div class="modal" id="authModal" aria-hidden="true">
+    <div class="modal-backdrop" data-close-auth></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+      <button class="modal-close" data-close-auth aria-label="Fechar">×</button>
+      <h2 id="authTitle">Seu histórico, em outros dispositivos</h2>
+      <p>A conta é opcional. Suas escolhas continuam aqui enquanto você entra.</p>
+      <label>E-mail<input id="authEmail" type="email" autocomplete="email" /></label>
+      <label>Senha<input id="authPassword" type="password" autocomplete="current-password" /></label>
+      <p id="authFeedback" role="status"></p>
+      <div class="modal-actions"><button class="secondary-button" id="signUpEmail">Criar conta</button><button class="primary-button" id="signInEmail">Entrar</button></div>
+      <button class="text-button" id="resetPassword">Esqueci minha senha</button>
+      <div id="recoveryFields" class="hidden"><label>Nova senha<input id="newPassword" type="password" autocomplete="new-password" /></label><button class="primary-button" id="updatePassword">Salvar nova senha</button></div>
+    </div>
+  </div>
   <div class="modal" id="generationConfirmationModal" aria-hidden="true">
     <div class="modal-backdrop" data-close-generation></div>
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="generationConfirmationTitle">
@@ -517,7 +569,7 @@
       <div class="eyebrow">ANTES DE ACIONAR A NUVEM</div>
       <h2 id="generationConfirmationTitle">Gerar este documento?</h2>
       <p id="generationConfirmationUsage" role="status"></p>
-      <p>O pedido será enviado à IA e pode gerar custos para o projeto. O planejamento inclui elaboração, revisão pedagógica e aprimoramento, que juntos contam como uma utilização da sua cota. Não inclua dados pessoais de estudantes.</p>
+      <p>O pedido será enviado à IA e tem custo para o projeto. Planejamentos passam por elaboração, revisão pedagógica e aprimoramento. Não inclua dados pessoais de estudantes.</p>
       <p>Para corrigir só uma palavra, prefira editar o documento: não há necessidade de uma nova geração.</p>
       <div class="modal-actions"><button class="secondary-button" data-close-generation>Voltar às escolhas</button><button class="primary-button" id="confirmGenerationButton">Confirmar geração</button></div>
     </div>
@@ -541,9 +593,10 @@
       <button class="modal-close" data-close-privacy aria-label="Fechar">×</button>
       <div class="eyebrow"><span>§</span> PRIVACIDADE, PORQUE ATÉ A SÁTIRA PRECISA DE LIMITES</div>
       <h2 id="privacyTitle">Como o Carijó trata seus dados</h2>
-      <p><strong>Turmas e preferências.</strong> Ficam neste dispositivo e são associadas a uma sessão técnica anônima no Supabase. Não é necessário informar e-mail nem senha.</p>
+      <p><strong>Turmas e preferências.</strong> Ficam neste dispositivo. Não é necessário informar e-mail nem senha para preparar ou gerar documentos.</p>
       <p><strong>Geração por IA.</strong> O pedido pedagógico é enviado à API da OpenAI para produzir o documento. Não escreva nomes, diagnósticos, contatos ou qualquer dado que identifique estudantes.</p>
-      <p><strong>Histórico.</strong> Só é salvo quando você solicita. Cada navegador acessa exclusivamente os registros de sua sessão por meio de políticas de segurança no banco.</p>
+      <p><strong>Histórico.</strong> Sem conta, os documentos que você salva ficam neste navegador. A conta opcional permite salvar documentos na nuvem e acessá-los em outros dispositivos, com acesso restrito ao titular.</p>
+      <p><strong>Consumo.</strong> O servidor registra tipo de pedido, estado, uso de tokens e custo estimado quando configurado. O registro de consumo não guarda o texto do planejamento.</p>
       <p><strong>Exclusão.</strong> Você pode apagar os dados locais separadamente ou excluir turmas, configurações, histórico e registros de uso armazenados na nuvem.</p>
       <p><strong>Responsabilidade.</strong> O resultado é um rascunho automatizado. Cabe ao professor revisar a adequação pedagógica, curricular e ética antes do uso.</p>
       <div class="modal-actions"><button class="primary-button" data-close-privacy>Entendi e continuarei sem nomes de estudantes</button></div>

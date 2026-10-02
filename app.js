@@ -59,6 +59,7 @@ function gradeFromClass(item) {
 }
 
 let previousTrimesters = new Set();
+let officialCatalogLoaded = false;
 let generatedContext = null;
 let supervisorReport = null;
 
@@ -243,6 +244,7 @@ const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_SmsYP1egkB6bS9y8lCrlfw_C21uKqgu
 const supabaseClient = window.supabase?.createClient?.(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 let currentUser = null;
 let cloudSyncInProgress = false;
+let cloudClassesReady = false;
 let authReady = false;
 let historyPlans = [];
 let currentPlanId = null;
@@ -251,6 +253,67 @@ let lastFocusedElement = null;
 let usageState = null;
 let generationInProgress = false;
 let resolveGenerationConfirmation = null;
+let quickStartKind = "plan";
+const DEVICE_DOCUMENTS_KEY = "carijo-device-documents-v1";
+function hasHistoryAccount() { return Boolean(currentUser && !currentUser.is_anonymous); }
+function readDeviceDocuments() {
+  try { const items = JSON.parse(localStorage.getItem(DEVICE_DOCUMENTS_KEY) || "[]"); return Array.isArray(items) ? items : []; }
+  catch { return []; }
+}
+function storeDeviceDocument(payload) {
+  const items = readDeviceDocuments();
+  const id = currentPlanId?.startsWith("local-") ? currentPlanId : `local-${crypto.randomUUID()}`;
+  const previous = items.find(item => item.id === id);
+  const now = new Date().toISOString();
+  const item = { ...payload, id, user_id: null, created_at: previous?.created_at || now, updated_at: now };
+  localStorage.setItem(DEVICE_DOCUMENTS_KEY, JSON.stringify([item, ...items.filter(entry => entry.id !== id)]));
+  currentPlanId = id;
+  return item;
+}
+async function invokeFreeGeneration(prompt, requestType) {
+  try {
+    let sessionId = sessionStorage.getItem("carijo-generation-session");
+    if (!sessionId) { sessionId = crypto.randomUUID(); sessionStorage.setItem("carijo-generation-session", sessionId); }
+    const headers = { "Content-Type": "application/json" };
+    const session = supabaseClient ? (await supabaseClient.auth.getSession()).data.session : null;
+    if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-plan-public`, {
+      method: "POST", headers, body: JSON.stringify({ prompt, requestType, sessionId }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(response.status === 404 ? "A função de geração livre ainda aguarda publicação. As escolhas estão preservadas; editar e consultar documentos continua disponível." : data.error || "Não foi possível gerar agora.");
+    if (!data?.plan) throw new Error("A geração retornou uma resposta vazia.");
+    return { data, error: null };
+  } catch (error) { return { data: null, error }; }
+}
+function openQuickStart(kind) {
+  quickStartKind = kind;
+  $("#quickStartTitle").textContent = kind === "activity" ? "Criar atividade ou avaliação" : "Criar planejamento";
+  $("#quickClass").innerHTML = `<option value="new">Informar disciplina e ano agora</option>${state.classes.map(item => `<option value="${item.id}">${escapeHtml(item.name)} · ${escapeHtml(item.subject)}</option>`).join("")}`;
+  $("#quickSubject").innerHTML = subjectOptionsHtml("Língua Portuguesa");
+  $("#quickGrade").innerHTML = Array.from({ length: 9 }, (_, i) => `<option value="${i + 1}">${i + 1}º ano</option>`).join("");
+  $("#quickNewFields").classList.remove("hidden");
+  $("#quickOtherField").classList.add("hidden");
+  $("#quickStartError").textContent = "";
+  showModalElement($("#quickStartModal"));
+}
+function continueQuickStart() {
+  let id = Number($("#quickClass").value);
+  if ($("#quickClass").value === "new") {
+    const subject = $("#quickSubject").value === "__other" ? $("#quickOther").value.trim() : $("#quickSubject").value;
+    const lessons = Number($("#quickLessons").value);
+    if (!subject || !Number.isInteger(lessons) || lessons < 1 || lessons > 30) { $("#quickStartError").textContent = "Informe a disciplina e de 1 a 30 aulas por semana."; return; }
+    id = Math.max(0, ...state.classes.map(item => item.id)) + 1;
+    state.classes.push({ id, name: `${$("#quickGrade").value}º ano`, subject, lessons, schedule: [], notes: "" });
+    renderManualStart();
+  }
+  renderClassOptions();
+  $("#classSelect").value = String(id);
+  $("#recorteClass").value = String(id);
+  hideModalElement($("#quickStartModal"));
+  if (quickStartKind === "activity") { openActivityBuilder(); $("#activityClassSelect").value = String(id); syncActivityGrade(); renderActivitySkills(); renderActivityProfileSummary(); }
+  else showScreen("choose");
+}
 const DAYS = [
   { name: "Seg", pattern: /\b(seg(?:unda)?(?:-feira)?)\b/i },
   { name: "Ter", pattern: /\b(ter(?:ça)?(?:-feira)?)\b/i },
@@ -890,6 +953,7 @@ async function loadOfficialSkillCatalog() {
     if (!Array.isArray(data.skills) || !data.skills.length) throw new Error("Base curricular vazia");
     const manualSkills = skillCatalog.filter(skill => skill.area === "manual");
     skillCatalog = [...data.skills, ...manualSkills];
+    officialCatalogLoaded = true;
     const activeKeys = new Set(skillCatalog.map(skillKey));
     state.skills = new Set([...state.skills].filter(key => activeKeys.has(key)));
     renderSkills();
@@ -899,7 +963,6 @@ async function loadOfficialSkillCatalog() {
 }
 
 function renderSkills(filter = "all") {
-  mandatoryQuarterSkills().forEach(skill => state.skills.add(skillKey(skill)));
   const available = skillsForSelectedClass();
   const items = available.filter(skill => filter === "all" || skill.area === filter);
   const item = getSelectedClass();
@@ -911,23 +974,24 @@ function renderSkills(filter = "all") {
   $("#skillList").innerHTML = items.length ? items.map(skill => `
     <div class="skill-item ${state.skills.has(skillKey(skill)) ? "selected" : ""}" data-code="${skillKey(skill)}" role="checkbox" aria-checked="${state.skills.has(skillKey(skill))}" tabindex="0">
       <span class="skill-check">✓</span>
-      <p>${escapeHtml(skill.text)}<strong class="skill-code-end">${escapeHtml(skillCodeLabel(skill))}</strong>${skill.page ? `<small>Matriz RMEF 2026, p. ${Number(skill.page)}</small>` : ""}${skill.trimester && skill.trimester < Number($("#recorteQuarter").value) ? `<small>Retomada do ${skill.trimester}º trimestre · opcional</small>` : state.planType === "quarter" && skill.area === "oficial" ? "<small>Incluída obrigatoriamente no trimestre</small>" : ""}</p>
+      <p>${escapeHtml(skill.text)}<strong class="skill-code-end">${escapeHtml(skillCodeLabel(skill))}</strong>${skill.page ? `<small>Matriz RMEF 2026, p. ${Number(skill.page)}</small>` : ""}${skill.trimester && skill.trimester < Number($("#recorteQuarter").value) ? `<small>Retomada do ${skill.trimester}º trimestre · opcional</small>` : ""}</p>
     </div>`).join("")
     : `<p class="empty-state">Nenhuma habilidade encontrada para este ano e componente na base local. Use a inclusão manual e valide o registro na matriz oficial.</p>`;
   $$(".skill-item").forEach(item => {
     const toggle = () => {
-      if (mandatoryQuarterSkills().some(skill => skillKey(skill) === item.dataset.code)) { toast("Todas as habilidades do trimestre fazem parte deste planejamento."); return; }
       state.skills.has(item.dataset.code) ? state.skills.delete(item.dataset.code) : state.skills.add(item.dataset.code);
       renderSkills($(".chip.active").dataset.filter);
     };
     item.addEventListener("click", toggle);
     item.addEventListener("keydown", event => { if (event.key === " " || event.key === "Enter") { event.preventDefault(); toggle(); } });
   });
-  $("#skillCount").textContent = `${state.skills.size} ${state.skills.size === 1 ? "selecionada" : "selecionadas"}`;
+  const omitted = mandatoryQuarterSkills().filter(skill => !state.skills.has(skillKey(skill))).length;
+  $("#skillCount").textContent = `${selectedSkills().length} selecionadas${omitted ? ` · ${omitted} da matriz fora do recorte` : ""}`;
   saveLocalData();
 }
 
-function configurePlanner(type) {
+async function configurePlanner(type) {
+  if (!officialCatalogLoaded) await loadOfficialSkillCatalog();
   previousTrimesters = new Set();
   state.planType = type;
   const quarter = type === "quarter";
@@ -947,7 +1011,7 @@ function configurePlanner(type) {
   $("#skillsHeading").textContent = quarter ? "Conteúdos e habilidades do trimestre" : "Habilidades do período";
   $("#skillsDescription").textContent = quarter ? "Todo o recorte curricular disponível foi incluído. Revise antes que a promessa de abrangência vire apenas uma lista." : "Escolha o que será devidamente mencionado no período.";
   $(".summary-help").textContent = quarter ? "O documento terá uma narrativa pedagógica contínua e contemplará todas as habilidades oficiais selecionadas." : "O documento será criado aula a aula, respeitando aulas-faixa e a fé nas escolhas pedagógicas marcadas acima.";
-  $("#generatePlan").firstChild.textContent = quarter ? "Gerar documento trimestral convincente " : "Gerar documento tranquilizador ";
+  $("#generatePlan").firstChild.textContent = quarter ? "Gerar planejamento trimestral " : "Gerar planejamento quinzenal ";
   renderClassOptions();
   renderSubjectProfileSummary();
   $("#recurringNotes").value = getSelectedClass()?.notes || "";
@@ -1053,7 +1117,6 @@ function generatedTextToHtml(value) {
 }
 
 async function buildActivityProposal() {
-  if (!supabaseClient || !currentUser) { toast("Entre na conta para gerar o instrumento"); openAuthModal(); return; }
   const item = state.classes.find(entry => entry.id === Number($("#activityClassSelect").value)) || state.classes[0];
   if (!item) return;
   if (!await confirmGeneration()) return;
@@ -1064,7 +1127,7 @@ async function buildActivityProposal() {
   $("#activityAIText").innerHTML = `<p>Preparando a atividade e os critérios de avaliação. Não é necessário clicar novamente: o servidor já recebeu serviço suficiente.</p>`;
   $("#activityOutput").classList.remove("hidden");
   try {
-    const { data, error } = await supabaseClient.functions.invoke("generate-plan", { body: { prompt: activityPrompt(), requestType: "activity" } });
+    const { data, error } = await invokeFreeGeneration(activityPrompt(), "activity");
     if (error) {
       let reason = error.message;
       if (typeof error.context?.json === "function") {
@@ -1127,7 +1190,6 @@ function updatePlannerSummary() {
 }
 
 function selectedSkills() {
-  mandatoryQuarterSkills().forEach(skill => state.skills.add(skillKey(skill)));
   return skillsForSelectedClass().filter(skill => state.skills.has(skillKey(skill)));
 }
 
@@ -1286,7 +1348,8 @@ function buildPrompt() {
   const skills = selectedSkills();
   const quarter = state.planType === "quarter";
   if (quarter && !mandatoryQuarterSkills().length) throw new Error("Carregue o recorte oficial da matriz antes de gerar o trimestre completo.");
-  return buildPromptBase().replace("aproximadamente ", "") + `\nREGRAS COMPLEMENTARES: ${quarter ? "Considere exatamente 12 semanas para o cálculo da carga, independentemente do calendário real. Inclua TODAS as habilidades do trimestre e as adicionais escolhidas. Desenvolva uma narrativa contínua e coerente; eixos ou subtítulos são opcionais e só devem aparecer se melhorarem a compreensão, nunca como exigência de formato." : "Respeite o número e a duração dos encontros."} As habilidades manuais são complementações do professor, não são automaticamente oficiais e não devem receber códigos BNCC inventados. Identifique as retomadas de trimestres anteriores como recomposição. Lista obrigatória completa: ${skills.map(skill => `${skill.text} (${skillCodeLabel(skill)})`).join(" | ")}. Use os títulos de seção exatamente: Objetivos; Conteúdos; Metodologia; Recursos Didáticos; Avaliação; Referências. Dentro de Metodologia inclua a narrativa do percurso ou a sequência de encontros. Cada seção deve aparecer uma vez, com título Markdown de nível 2. As referências válidas são exclusivamente as selecionadas pelo professor, mesmo quando o perfil disciplinar menciona outras obras.`;
+  if (!skills.length) throw new Error("Selecione ao menos uma habilidade para orientar o planejamento.");
+  return buildPromptBase().replace("aproximadamente ", "") + `\nREGRAS COMPLEMENTARES: ${quarter ? "Considere exatamente 12 semanas apenas para calcular a carga e dimensionar o conteúdo, independentemente do calendário real. Não divida o resultado semana por semana. Inclua todas e somente as habilidades selecionadas pelo professor: ele pode retirar habilidades do trimestre. Não reinsira as retiradas. Desenvolva parágrafos fluidos nas seções pedagógicas, sem impor três eixos ou listas fragmentadas." : "Respeite o número e a duração dos encontros."} As habilidades manuais são complementações do professor, não são automaticamente oficiais e não devem receber códigos BNCC inventados. Identifique as retomadas de trimestres anteriores como recomposição. Lista selecionada completa: ${skills.map(skill => `${skill.text} (${skillCodeLabel(skill)})`).join(" | ")}. Use os títulos de seção exatamente: Objetivos; Conteúdos; Metodologia; Recursos Didáticos; Avaliação; Referências. Dentro de Metodologia inclua a narrativa do percurso ou a sequência de encontros. Cada seção deve aparecer uma vez, com título Markdown de nível 2. As referências válidas são exclusivamente as selecionadas pelo professor, mesmo quando o perfil disciplinar menciona outras obras.`;
 }
 
 function buildPlan() {
@@ -1475,13 +1538,12 @@ function printActivity() {
 }
 
 async function saveActivityToHistory() {
-  if (!supabaseClient || !currentUser) { toast("Entre na conta para salvar a atividade"); openAuthModal(); return; }
   const item = state.classes.find(entry => entry.id === Number($("#activityClassSelect").value)) || state.classes[0];
   const title = $("#activityOutputTitle").textContent.trim() || "Atividade ou avaliação";
   const text = $("#activityAIText").innerText.trim();
   if (!text) { toast("Gere a atividade antes de salvar"); return; }
   const payload = {
-    user_id: currentUser.id,
+    user_id: currentUser?.id || null,
     class_id: item?.id || null,
     class_name: item?.name || "Turma",
     subject: item?.subject || "Componente curricular",
@@ -1491,7 +1553,8 @@ async function saveActivityToHistory() {
     plan_data: { aiText: currentActivityText || text, documentText: text, planType: "activity", savedAt: new Date().toISOString() },
     document_html: sanitizeDocumentHtml($("#activityAIText").innerHTML),
   };
-  const query = currentPlanId
+  if (!hasHistoryAccount()) { try { storeDeviceDocument(payload); toast("Atividade salva neste dispositivo"); } catch { toast("Não foi possível salvar: libere espaço ou baixe uma cópia."); } return; }
+  const query = currentPlanId && !currentPlanId.startsWith("local-")
     ? supabaseClient.from("teacher_plans").update({ ...payload, updated_at: new Date().toISOString() }).eq("id", currentPlanId).select("id").single()
     : supabaseClient.from("teacher_plans").insert(payload).select("id").single();
   const { data, error } = await query;
@@ -1523,7 +1586,6 @@ function currentPlanSnapshot() {
 }
 
 async function savePlanToHistory() {
-  if (!supabaseClient || !currentUser) { toast("Entre na conta para guardar planejamentos no histórico"); openAuthModal(); return; }
   const snapshot = currentPlanSnapshot();
   const item = getSelectedClass();
   const button = $("#savePlan");
@@ -1531,7 +1593,7 @@ async function savePlanToHistory() {
   button.textContent = "Salvando…";
   try {
     const payload = {
-      user_id: currentUser.id,
+      user_id: currentUser?.id || null,
       class_id: item?.id || null,
       class_name: snapshot.className,
       subject: snapshot.subject,
@@ -1541,7 +1603,8 @@ async function savePlanToHistory() {
       plan_data: snapshot,
       document_html: sanitizeDocumentHtml($("#planDocument")?.innerHTML || "")
     };
-    const query = currentPlanId
+    if (!hasHistoryAccount()) { storeDeviceDocument(payload); toast("Planejamento salvo neste dispositivo"); return; }
+    const query = currentPlanId && !currentPlanId.startsWith("local-")
       ? supabaseClient.from("teacher_plans").update({ ...payload, updated_at: new Date().toISOString() }).eq("id", currentPlanId).select("id").single()
       : supabaseClient.from("teacher_plans").insert(payload).select("id").single();
     const { data, error } = await query;
@@ -1655,7 +1718,8 @@ function openSavedDocument(plan) {
 }
 
 async function duplicateSavedDocument(plan) {
-  if (!plan || !currentUser) return;
+  if (!plan) return;
+  if (plan.id.startsWith("local-")) { currentPlanId = null; storeDeviceDocument({ ...plan, title: `${plan.title} — cópia` }); await loadHistoryPage(); return; }
   const { id, created_at, updated_at, ...copy } = plan;
   const { error } = await supabaseClient.from("teacher_plans").insert({ ...copy, user_id: currentUser.id, title: `${plan.title} — cópia` });
   if (error) { toast("Não foi possível duplicar"); return; }
@@ -1665,6 +1729,11 @@ async function duplicateSavedDocument(plan) {
 
 async function deleteSavedDocument(plan) {
   if (!plan || !window.confirm(`Excluir “${plan.title}”? Esta ação não pode ser desfeita.`)) return;
+  if (plan.id.startsWith("local-")) {
+    localStorage.setItem(DEVICE_DOCUMENTS_KEY, JSON.stringify(readDeviceDocuments().filter(item => item.id !== plan.id)));
+    if (currentPlanId === plan.id) currentPlanId = null;
+    await loadHistoryPage(); return;
+  }
   const { error } = await supabaseClient.from("teacher_plans").delete().eq("id", plan.id);
   if (error) { toast("Não foi possível excluir"); return; }
   historyPlans = historyPlans.filter(entry => entry.id !== plan.id);
@@ -1674,17 +1743,16 @@ async function deleteSavedDocument(plan) {
 }
 
 async function loadHistoryPage() {
-  if (!supabaseClient || !currentUser) { toast("Entre na conta para acessar o histórico"); openAuthModal(); return; }
+  if (!hasHistoryAccount()) { historyPlans = readDeviceDocuments(); renderHistoryPage(); $("#historyUsageSummary").textContent = "Salvos neste dispositivo · conta opcional"; return; }
   $("#historyPageList").innerHTML = `<div class="history-page-empty"><p>Consultando a memória burocrática…</p></div>`;
   const { data, error } = await supabaseClient.from("teacher_plans").select("id,user_id,class_id,class_name,subject,plan_type,title,period_label,plan_data,document_html,created_at,updated_at").order("updated_at", { ascending: false }).limit(200);
   if (error) { $("#historyPageList").innerHTML = `<div class="history-page-empty"><p>Não foi possível carregar o histórico.</p></div>`; return; }
-  historyPlans = data || [];
+  historyPlans = [...readDeviceDocuments(), ...(data || [])].sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)));
   renderHistoryPage();
   await loadUsageStatus();
 }
 
 async function openHistory() {
-  if (!supabaseClient || !currentUser) { toast("Entre na conta para acessar o histórico"); openAuthModal(); return; }
   closeDataModal();
   showScreen("historyPage");
   await loadHistoryPage();
@@ -1695,7 +1763,6 @@ function closeHistory() {
 }
 
 async function generatePlanWithAI(initialGeneration = false) {
-  if (!supabaseClient || !currentUser) { toast("Entre na conta para gerar com IA"); openAuthModal(); return; }
   if (!await confirmGeneration()) return;
   const button = initialGeneration ? $("#generatePlan") : $("#generateWithAI");
   try {
@@ -1711,7 +1778,7 @@ async function generatePlanWithAI(initialGeneration = false) {
   $("#aiPlanText").textContent = "Seu planejamento está sendo elaborado e aprimorado pelo Assistente Pedagógico. Aguarde a versão final.";
   $("#copyAIPlan").textContent = "Aguarde";
   $("#aiPlanOutput").classList.remove("hidden");
-    const { data, error } = await supabaseClient.functions.invoke("generate-plan", { body: { prompt: generationPrompt, requestType: "plan", supervise: true } });
+    const { data, error } = await invokeFreeGeneration(generationPrompt, "plan");
     if (error) {
       let reason = error.message;
       if (typeof error.context?.json === "function") {
@@ -1751,7 +1818,6 @@ async function generatePlanWithAI(initialGeneration = false) {
 }
 
 async function generateFinalDocument() {
-  if (!supabaseClient || !currentUser) { toast("Entre na conta para gerar o planejamento final"); openAuthModal(); return; }
   await generatePlanWithAI(true);
 }
 
@@ -1759,15 +1825,7 @@ async function confirmGeneration() {
   if (generationInProgress) { toast("Já existe um pedido em andamento. Aguarde a conclusão."); return false; }
   generationInProgress = true;
   try {
-    await loadUsageStatus();
-    if (usageState && usageState.remaining === 0) {
-      toast("Sua cota mensal terminou. Você ainda pode editar, copiar e imprimir documentos salvos.");
-      generationInProgress = false;
-      return false;
-    }
-    $("#generationConfirmationUsage").textContent = usageState
-      ? `Você tem ${usageState.remaining} de ${usageState.limit} gerações disponíveis neste mês. Este pedido utiliza uma geração, se concluído.`
-      : "Não foi possível consultar sua cota agora. O servidor verificará o limite antes de iniciar o pedido.";
+    $("#generationConfirmationUsage").textContent = "O acesso é gratuito e não exige conta. Este pedido usa a IA e tem custo para o projeto. Aguarde a conclusão antes de iniciar outro.";
     const accepted = await new Promise(resolve => {
       resolveGenerationConfirmation = resolve;
       showModalElement($("#generationConfirmationModal"));
@@ -1802,9 +1860,10 @@ function updateAuthInterface() {
   const status = $("#authUserState");
   const button = $("#authButton");
   const avatar = $(".avatar");
+  if ($("#optionalLogin")) $("#optionalLogin").textContent = hasHistoryAccount() ? "Sair da conta" : "Entrar para sincronizar histórico";
   if (!currentUser) {
     name.textContent = "Acesso livre";
-    status.textContent = "Preparando sessão…";
+    status.textContent = "Salvo neste dispositivo";
     button.textContent = "Dados";
     avatar.textContent = "C";
     return;
@@ -1825,7 +1884,7 @@ function updateAuthInterface() {
 }
 
 async function syncCloudData() {
-  if (!supabaseClient || !currentUser || cloudSyncInProgress) return;
+  if (!supabaseClient || !hasHistoryAccount() || !cloudClassesReady || cloudSyncInProgress) return;
   cloudSyncInProgress = true;
   try {
     const userId = currentUser.id;
@@ -1880,6 +1939,7 @@ async function loadCloudData() {
     }
     if (settingsResult.data?.skills) state.skills = new Set(settingsResult.data.skills);
     if (["quarter", "fortnight"].includes(settingsResult.data?.plan_type)) state.planType = settingsResult.data.plan_type;
+    cloudClassesReady = true;
     renderManualStart();
     renderSchedule();
     renderSkills();
@@ -1898,45 +1958,47 @@ async function handleAuthSession(session) {
   const changedUser = nextUser?.id !== currentUser?.id;
   currentUser = nextUser;
   updateAuthInterface();
-  if (currentUser && changedUser) {
-    await loadCloudData();
+  if (hasHistoryAccount() && changedUser) {
+    // Preserve the in-progress form; importing cloud classes is explicit when local classes exist.
+    if (!state.classes.length) await loadCloudData();
     await loadUsageStatus();
   } else if (!currentUser) {
+    cloudClassesReady = false;
     usageState = null;
-    if ($("#usagePillText")) $("#usagePillText").textContent = "entre para consultar";
+    if ($("#usagePillText")) $("#usagePillText").textContent = "acesso livre";
   }
 }
 
 async function initializeAuth() {
   if (!supabaseClient) { console.warn("Cliente Supabase não carregado."); return; }
-  supabaseClient.auth.onAuthStateChange((_event, session) => {
+  supabaseClient.auth.onAuthStateChange((event, session) => {
     setTimeout(() => {
-      void handleAuthSession(session).catch(() => toast("Não foi possível sincronizar a sessão agora."));
+      void handleAuthSession(session).catch(() => toast("Não foi possível sincronizar a conta agora."));
+      if (event === "PASSWORD_RECOVERY") { passwordRecovery = true; $("#recoveryFields").classList.remove("hidden"); openAuthModal(); }
     }, 0);
   });
   try {
     const { data: { session }, error } = await supabaseClient.auth.getSession();
     if (error) throw error;
     if (session) await handleAuthSession(session);
-    else {
-      const { data, error: anonymousError } = await supabaseClient.auth.signInAnonymously();
-      if (anonymousError) throw anonymousError;
-      await handleAuthSession(data.session);
-    }
+    else updateAuthInterface();
   } catch (error) {
     console.warn("Não foi possível iniciar o acesso livre.", error);
-    toast("O acesso livre ainda não pôde ser iniciado. Recarregue a página em instantes.");
-  } finally {
-    authReady = true;
+    updateAuthInterface();
   }
+  finally { authReady = true; }
 }
 
 function openAuthModal() {
-  toast("O acesso é livre e não exige e-mail nem senha.");
+  closeDataModal();
+  if (!supabaseClient) { toast("Não foi possível conectar a conta agora. Você pode continuar sem login."); return; }
+  showModalElement($("#authModal"));
 }
 
 function closeAuthModal() {
-  // Mantido para compatibilidade com sessões antigas durante a transição.
+  hideModalElement($("#authModal"));
+  $("#authPassword").value = "";
+  $("#newPassword").value = "";
 }
 
 function authEmail() {
@@ -2011,7 +2073,7 @@ async function resetPassword() {
 
 async function updatePassword() {
   if (!passwordRecovery) return;
-  const password = $("#authPassword").value;
+  const password = $("#newPassword").value;
   if (!password) { setAuthFeedback("Digite sua nova senha.", true); return; }
   await runAuthAction(async () => {
     const { error } = await supabaseClient.auth.updateUser({ password });
@@ -2025,7 +2087,19 @@ async function updatePassword() {
 async function signOut() {
   if (!supabaseClient) return;
   const { error } = await supabaseClient.auth.signOut();
-  if (error) toast(error.message); else { closeDataModal(); toast("Você saiu da conta"); }
+  if (error) toast(error.message); else {
+    currentUser = null;
+    cloudClassesReady = false;
+    state.classes = [];
+    historyPlans = [];
+    currentPlanId = null;
+    generatedContext = null;
+    localStorage.removeItem(LOCAL_STORAGE_KEY);
+    $("#planDocument").innerHTML = "";
+    $("#activityAIText").innerHTML = "";
+    renderManualStart(); renderClassOptions(); updateAuthInterface();
+    closeDataModal(); showScreen("upload"); toast("Você saiu da conta. Documentos de visitante continuam neste dispositivo.");
+  }
 }
 
 function toast(message) {
@@ -2068,36 +2142,19 @@ function updateUsageUI(usage) {
 }
 
 async function loadUsageStatus() {
-  if (!supabaseClient || !currentUser) {
-    if ($("#usagePillText")) $("#usagePillText").textContent = "entre para consultar";
-    return;
-  }
-  const period = `${new Date().toISOString().slice(0, 7)}-01`;
-  const [usageResult, limitResult] = await Promise.all([
-    supabaseClient.from("generation_monthly_usage").select("used,usage_limit").eq("period_start", period).maybeSingle(),
-    supabaseClient.from("teacher_usage_limits").select("monthly_limit").maybeSingle(),
-  ]);
-  if (usageResult.error || limitResult.error) {
-    usageState = null;
-    $("#usagePillText").textContent = "cota indisponível";
-    $("#homeUsageStatus").textContent = "A cota não pôde ser consultada. O servidor verifica o limite antes de gerar.";
-    return;
-  }
-  const limit = Number(limitResult.data?.monthly_limit ?? usageResult.data?.usage_limit ?? 8);
-  const used = Number(usageResult.data?.used || 0);
-  updateUsageUI({ used, limit, remaining: Math.max(0, limit - used) });
+  $("#usagePillText").textContent = "acesso livre";
+  $("#homeUsageStatus").textContent = "Sem cadastro para gerar. Conta opcional para sincronizar seu histórico.";
 }
 
 function notifyGenerationUsage(usage) {
-  updateUsageUI(usage);
   const cost = Number(usage?.estimatedCostUsd);
   const costText = Number.isFinite(cost) && cost > 0 ? ` · custo estimado US$ ${cost.toFixed(4)}` : "";
-  const content = `<strong>Mais um voo computacional concluído.</strong><span>Restam ${usageState?.remaining ?? "?"} de ${usageState?.limit ?? "?"} gerações neste mês${escapeHtml(costText)}. Dinheiro e natureza foram devidamente convertidos em burocracia.</span>`;
+  const content = `<strong>Geração concluída.</strong><span>Acesso livre${escapeHtml(costText)}. A máquina não conhece sua turma: revise a proposta à luz do que acontece em sala.</span>`;
   [$("#generationUsageNotice"), $("#activityUsageNotice")].filter(Boolean).forEach(notice => {
     notice.innerHTML = content;
     notice.classList.remove("hidden");
   });
-  toast(`Geração concluída · restam ${usageState?.remaining ?? "?"}${costText}`);
+  toast(`Geração concluída${costText}`);
 }
 
 function openIronyModal() {
@@ -2138,7 +2195,9 @@ function closeDataModal() {
 
 function exportLocalData() {
   saveLocalData();
-  const blob = new Blob([localStorage.getItem(LOCAL_STORAGE_KEY)], { type: "application/json" });
+  const payload = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || "{}");
+  payload.documents = readDeviceDocuments();
+  const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -2166,6 +2225,10 @@ async function importLocalData(event) {
     });
     if (Array.isArray(payload.skills)) state.skills = new Set(payload.skills.slice(0, 300).map(value => String(value).slice(0, 200)));
     if (["quarter", "fortnight"].includes(payload.planType)) state.planType = payload.planType;
+    if (Array.isArray(payload.documents)) {
+      const imported = payload.documents.slice(0, 200).filter(item => typeof item?.document_html === "string" && ["quarter", "fortnight", "activity"].includes(item.plan_type)).map(item => ({ ...item, id: `local-${crypto.randomUUID()}`, user_id: null, document_html: sanitizeDocumentHtml(item.document_html) }));
+      localStorage.setItem(DEVICE_DOCUMENTS_KEY, JSON.stringify([...imported, ...readDeviceDocuments()]));
+    }
     saveLocalData();
     renderManualStart();
     renderSchedule();
@@ -2189,6 +2252,23 @@ function clearLocalData() {
   localStorage.removeItem(LOCAL_STORAGE_KEY);
   updateStorageStatus(null);
   toast("Dados removidos deste dispositivo");
+}
+
+function initializeHomeActions() {
+  $$("[data-start]").forEach(button => button.addEventListener("click", () => openQuickStart(button.dataset.start)));
+  $("#homeDocuments").addEventListener("click", openHistory);
+  $("#homeCorrection").addEventListener("click", () => showModalElement($("#correctionInfoModal")));
+  $$('[data-close-correction]').forEach(button => button.addEventListener("click", () => hideModalElement($("#correctionInfoModal"))));
+  $$('[data-close-quick]').forEach(button => button.addEventListener("click", () => hideModalElement($("#quickStartModal"))));
+  $("#quickClass").addEventListener("change", () => $("#quickNewFields").classList.toggle("hidden", $("#quickClass").value !== "new"));
+  $("#quickSubject").addEventListener("change", () => $("#quickOtherField").classList.toggle("hidden", $("#quickSubject").value !== "__other"));
+  $("#quickContinue").addEventListener("click", continueQuickStart);
+  $("#optionalLogin").addEventListener("click", () => hasHistoryAccount() ? signOut() : openAuthModal());
+  $("#signInEmail").addEventListener("click", signInWithEmail);
+  $("#signUpEmail").addEventListener("click", signUpWithEmail);
+  $("#resetPassword").addEventListener("click", resetPassword);
+  $("#updatePassword").addEventListener("click", updatePassword);
+  $$('[data-close-auth]').forEach(button => button.addEventListener("click", closeAuthModal));
 }
 
 async function deleteCloudAccount() {
@@ -2218,6 +2298,7 @@ async function deleteCloudAccount() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  initializeHomeActions();
   initializePlanningDates();
   restoreLocalData();
   renderClassOptions();
@@ -2361,7 +2442,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#saveActivity").addEventListener("click", saveActivityToHistory);
   $("#printActivity").addEventListener("click", printActivity);
   configureEditorToolbar($("#activityEditorToolbar"), $("#activityAIText"));
-  $("#usagePill").addEventListener("click", () => usageState ? toast(`Restam ${usageState.remaining} de ${usageState.limit} gerações neste mês`) : (currentUser ? loadUsageStatus() : toast("A sessão livre ainda está sendo preparada.")));
+  $("#usagePill").addEventListener("click", () => toast("Acesso livre. Cada geração tem custo para o projeto; editar e imprimir não usa a IA."));
   $(".mobile-menu").addEventListener("click", event => { const open = $(".sidebar").classList.toggle("open"); event.currentTarget.setAttribute("aria-expanded", String(open)); });
   $$(".sidebar button").forEach(button => button.addEventListener("click", () => { $(".sidebar").classList.remove("open"); $(".mobile-menu").setAttribute("aria-expanded", "false"); }));
   document.addEventListener("keydown", event => {

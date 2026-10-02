@@ -17,6 +17,28 @@
 }
 
 * { box-sizing: border-box; }
+.home-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin: 28px 0; }
+.home-action { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 26px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); text-align: left; cursor: pointer; transition: border-color .18s, box-shadow .18s; }
+.home-action:hover { border-color: var(--green-deep); box-shadow: 0 8px 24px rgba(51,40,31,.08); }
+.home-action strong { font-family: var(--serif); font-size: 25px; font-weight: 400; }
+.home-action > span:not(.home-action-icon) { color: var(--muted); line-height: 1.65; }
+.home-action-icon { color: var(--green-deep); font-size: 25px; }
+.home-action small { margin-top: auto; padding-top: 10px; color: var(--green-deep); font-weight: 700; }
+.home-details { margin: 18px 0; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); padding: 20px; }
+.home-details > summary, .personalization-section > summary { cursor: pointer; font-weight: 700; line-height: 1.6; }
+.home-details[open] > summary { margin-bottom: 22px; }
+.personalization-section { display: block !important; padding: 24px !important; }
+.personalization-section .form-number { display: none; }
+.personalization-section[open] > summary { padding-bottom: 24px; border-bottom: 1px solid var(--line); margin-bottom: 24px; }
+.personalization-section .form-body { min-width: 0; }
+.activity-personalization { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line); }
+.activity-personalization > summary { cursor: pointer; font-weight: 700; margin-bottom: 18px; }
+.activity-personalization label { display: grid; gap: 8px; }
+#authModal label { display: grid; gap: 8px; margin: 18px 0; }
+#authModal input { width: 100%; padding: 12px; border: 1px solid var(--line); border-radius: 9px; }
+#quickStartError { color: #923c26; }
+#planForm, #activityBuilder, #result, #historyPage { background: rgba(255,250,241,.86); min-height: calc(100vh - 90px); }
+@media (max-width: 640px) { .home-actions { grid-template-columns: 1fr; gap: 12px; } .home-action { padding: 22px; } .home-action strong { font-size: 23px; } .personalization-section { padding: 18px !important; } }
 .previous-skills, .supervisor-panel { padding: 20px; margin: 18px 0; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); }
 .previous-skills label { display: flex; gap: 10px; margin: 12px 0; }
 .supervisor-panel p, #supervisorText { font-size: 14px; line-height: 1.7; }
@@ -31,7 +53,24 @@ button { color: inherit; }
 .sidebar { position: fixed; inset: 0 auto 0 0; width: 274px; padding: 32px 24px 22px; border-right: 1px solid var(--line); background: repeating-linear-gradient(135deg, rgba(110,75,39,.035) 0 1px, transparent 1px 10px), #eee3d0; display: flex; flex-direction: column; z-index: 20; }
 .brand { display: flex; gap: 12px; align-items: center; text-decoration: none; color: var(--ink); margin: 0 8px 46px; }
 .brand-mark { width: 46px; height: 46px; display: grid; place-items: center; flex: 0 0 46px; }
-.brand-mark img { width: 56px; height: 56px; object-fit: contain; filter: drop-shadow(0 3px 4px rgba(39, 27, 13, .16)); }
+/* Carijó: ilustração botânica e marca sem fundo. */
+body {
+  background-color: var(--cream);
+  background-image: linear-gradient(rgba(244,237,224,.83), rgba(244,237,224,.83)), url("carijo-fundo-botanico.webp");
+  background-position: center;
+  background-size: cover;
+  background-attachment: fixed;
+}
+.brand-mark { width: 64px; height: 64px; flex-basis: 64px; }
+.brand-mark img { width: 70px; height: 70px; background: transparent; filter: none; }
+.brand-preview { background: #f8f1e5; }
+@media (max-width: 720px) {
+  body { background-attachment: scroll; background-size: auto 1100px; }
+}
+@media print {
+  body { background: white !important; }
+}
+.brand-mark img { width: 70px; height: 70px; object-fit: contain; filter: none; }
 .brand > span:last-child { display: grid; line-height: 1; }
 .brand strong { font-family: var(--serif); font-size: 22px; font-weight: 400; }
 .brand small { margin-top: 5px; color: var(--coral); letter-spacing: .14em; text-transform: uppercase; font-size: 8px; font-weight: 700; }
@@ -409,7 +448,18 @@ textarea { resize: vertical; min-height: 82px; line-height: 1.5; }
 .brand-preview figcaption { margin-top: 12px; color: var(--muted); font-family: var(--serif); font-size: 16px; }
 .modal-card h2 { font-family: var(--serif); font-size: 28px; font-weight: 400; margin: 0 0 6px; }
 .modal-card > p { color: var(--muted); font-size: 10px; }
-.irony-modal-card { max-width: 650px; }
+/* Manifesto: leitura integral em qualquer altura de tela. */
+#ironyModal .irony-modal-card { width: min(860px, calc(100% - 24px)); max-width: 860px; max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; padding: 0 36px 32px; }
+#ironyModal .modal-close { position: sticky; display: block; top: 12px; margin: 12px 0 0 auto; width: 44px; height: 44px; z-index: 2; border-radius: 50%; background: var(--paper); box-shadow: 0 2px 10px #0002; color: var(--ink); }
+#ironyModal h2 { max-width: 650px; font-size: clamp(28px, 4vw, 40px); line-height: 1.16; margin: 12px 0 24px; text-wrap: balance; }
+.manifesto-illustration { margin: 0 0 30px; }
+.manifesto-illustration img { display: block; width: 100%; height: auto; border-radius: 12px; }
+.manifesto-illustration figcaption { font-size: 13px; line-height: 1.6; color: var(--muted); margin-top: 10px; font-style: italic; }
+#ironyModal .irony-copy { max-width: 66ch; margin: 0 auto; gap: 22px; }
+#ironyModal .irony-copy p { font-size: 16px; line-height: 1.85; color: var(--ink); overflow-wrap: anywhere; }
+#ironyModal .modal-actions { padding-top: 24px; margin-top: 24px; border-top: 1px solid #d8cebd; }
+#ironyModal :focus-visible { outline: 3px solid var(--coral); outline-offset: 3px; }
+@media (max-width: 600px) { #ironyModal .irony-modal-card { padding: 0 20px 24px; } #ironyModal .irony-copy p { font-size: 15px; line-height: 1.8; } }
 .irony-copy { margin-top: 19px; display: grid; gap: 13px; }
 .irony-copy p { margin: 0; color: var(--ink-2); font-size: 12px; line-height: 1.7; }
 .irony-copy p:last-child { padding: 13px 15px; background: var(--green-pale); border-left: 3px solid var(--coral); border-radius: 0 8px 8px 0; }
@@ -777,35 +827,3 @@ input, select, textarea { color: var(--ink); }
   body.printing-activity #activityBuilder .generated-plan-body p,
   body.printing-activity #activityBuilder .generated-plan-body li { font-size: 10pt; line-height: 1.6; }
 }
-
-
-/* Carijó: ilustração botânica e marca sem fundo. */
-body {
-  background-color: var(--cream);
-  background-image: linear-gradient(rgba(244,237,224,.83), rgba(244,237,224,.83)), url("carijo-fundo-botanico.webp");
-  background-position: center;
-  background-size: cover;
-  background-attachment: fixed;
-}
-.brand-mark { width: 64px; height: 64px; flex-basis: 64px; }
-.brand-mark img { width: 70px; height: 70px; background: transparent; filter: none; }
-.brand-preview { background: #f8f1e5; }
-@media (max-width: 720px) {
-  body { background-attachment: scroll; background-size: auto 1100px; }
-}
-@media print {
-  body { background: white !important; }
-}
-
-/* Manifesto: leitura integral em qualquer altura de tela. */
-#ironyModal .irony-modal-card { width: min(860px, calc(100% - 24px)); max-width: 860px; max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; padding: 0 36px 32px; }
-#ironyModal .modal-close { position: sticky; display: block; top: 12px; margin: 12px 0 0 auto; width: 44px; height: 44px; z-index: 2; border-radius: 50%; background: var(--paper); box-shadow: 0 2px 10px #0002; color: var(--ink); }
-#ironyModal h2 { max-width: 650px; font-size: clamp(28px, 4vw, 40px); line-height: 1.16; margin: 12px 0 24px; text-wrap: balance; }
-.manifesto-illustration { margin: 0 0 30px; }
-.manifesto-illustration img { display: block; width: 100%; height: auto; border-radius: 12px; }
-.manifesto-illustration figcaption { font-size: 13px; line-height: 1.6; color: var(--muted); margin-top: 10px; font-style: italic; }
-#ironyModal .irony-copy { max-width: 66ch; margin: 0 auto; gap: 22px; }
-#ironyModal .irony-copy p { font-size: 16px; line-height: 1.85; color: var(--ink); overflow-wrap: anywhere; }
-#ironyModal .modal-actions { padding-top: 24px; margin-top: 24px; border-top: 1px solid #d8cebd; }
-#ironyModal :focus-visible { outline: 3px solid var(--coral); outline-offset: 3px; }
-@media (max-width: 600px) { #ironyModal .irony-modal-card { padding: 0 20px 24px; } #ironyModal .irony-copy p { font-size: 15px; line-height: 1.8; } }
