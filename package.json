@@ -2,7 +2,8 @@
   "name": "carijo",
   "private": true,
   "scripts": {
-    "test": "node --check app.js && node --check sge-ui.js && node --check document-editor.js && node --check document-export.mjs && node --check export-ui.mjs && node tests/smoke.mjs && node tests/generation-guard.mjs && node tests/curriculum-supervisor.mjs && node tests/entry-flow.mjs && node tests/public-generation.mjs && node tests/document-versions.mjs && node tests/editor-persistence.mjs && node tests/document-exports.mjs",
+    "test:review": "node --check generation-recovery.mjs && node --check quality-ui.mjs && node --check written-correction.mjs && node tests/review-tools.mjs && node tests/recovery-client.mjs && node tests/generation-recovery.mjs",
+    "test": "node --check app.js && node --check sge-ui.js && node --check document-editor.js && node --check document-export.mjs && node --check export-ui.mjs && node tests/smoke.mjs && node tests/generation-guard.mjs && node tests/curriculum-supervisor.mjs && node tests/entry-flow.mjs && node tests/public-generation.mjs && node tests/generation-recovery.mjs && node tests/review-tools.mjs && node tests/document-versions.mjs && node tests/editor-persistence.mjs && node tests/document-exports.mjs",
     "test:assessments": "node --check assessment-ui.mjs && node --check correction-ui.mjs && node --check camera-capture.mjs && node --check local-readers.mjs && node --check admin-ui.mjs && node tests/camera-capture.mjs && node tests/assessment-source.mjs && node tests/assessments.mjs && node tests/admin-security.mjs && node tests/workspace-loading.mjs && node tests/roster-import.mjs && node tests/public-generation.mjs",
     "preview": "node tests/preview-server.mjs"
   }

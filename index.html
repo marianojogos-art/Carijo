@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="carijo-release" content="2026-10-02-camera-automatica" />
+  <meta name="carijo-release" content="2026-10-02-revisao-recuperacao" />
   <meta name="description" content="Carijó — planejamento pedagógico para professores da Rede Municipal de Florianópolis." />
   <meta name="referrer" content="no-referrer" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://cdn.jsdelivr.net https://tessdata.projectnaptha.com https://zfztuvkrejskelaomoan.supabase.co wss://zfztuvkrejskelaomoan.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'" />
@@ -57,7 +57,8 @@
       </div>
     </aside>
 
-    <main class="main">
+    <a class="skip-link" href="#mainContent">Ir para o conteúdo</a>
+    <main class="main" id="mainContent" tabindex="-1">
       <header class="topbar">
         <button class="mobile-menu" aria-label="Abrir menu" aria-expanded="false" aria-controls="mainSidebar">☰</button>
         <blockquote class="context-label"><span>“</span><em>Tudo o que não cabe em uma métrica será cuidadosamente ignorado.</em><cite>— ChatGPT</cite></blockquote>
@@ -597,7 +598,7 @@
       <p><strong>Turmas e preferências.</strong> Ficam neste dispositivo. Não é necessário informar e-mail nem senha para preparar ou gerar documentos.</p>
       <p><strong>Geração por IA.</strong> O pedido pedagógico é enviado à API da OpenAI para produzir o documento. Não escreva nomes, diagnósticos, contatos ou qualquer dado que identifique estudantes.</p>
       <p><strong>Histórico.</strong> Sem conta, os documentos que você salva ficam neste navegador. A conta opcional permite salvar documentos na nuvem e acessá-los em outros dispositivos, com acesso restrito ao titular.</p>
-      <p><strong>Consumo.</strong> O servidor registra tipo de pedido, estado, uso de tokens e custo estimado quando configurado. O registro de consumo não guarda o texto do planejamento.</p>
+      <p><strong>Consumo e recuperação.</strong> O servidor registra tipo de pedido, estado, uso de tokens e custo estimado quando configurado. Para recuperar uma geração interrompida no navegador, o resultado fica temporariamente guardado por 24 horas após a conclusão, acessível pela credencial privada salva neste dispositivo. Depois, o conteúdo é removido na limpeza periódica. O pedido não é guardado no registro de consumo. Apague o comprovante local em computadores compartilhados.</p>
       <p><strong>Correção de avaliações.</strong> Cadastro de estudantes, fotos, transcrições e notas ficam neste navegador e não são enviados à IA ou à nuvem. Cópias de segurança baixadas contêm dados pessoais. Em computadores compartilhados, apague os dados locais ao terminar.</p>
       <p><strong>Exclusão.</strong> Você pode apagar os dados locais separadamente ou excluir turmas, configurações, histórico e registros de uso armazenados na nuvem.</p>
       <p><strong>Responsabilidade.</strong> O resultado é um rascunho automatizado. Cabe ao professor revisar a adequação pedagógica, curricular e ética antes do uso.</p>
@@ -613,6 +614,8 @@
   <script type="module" src="assessment-ui.mjs"></script>
   <script type="module" src="correction-ui.mjs"></script>
   <script type="module" src="admin-ui.mjs"></script>
+  <script type="module" src="generation-recovery.mjs"></script>
+  <script type="module" src="quality-ui.mjs"></script>
   <script src="sge-ui.js"></script>
 </body>
 </html>

@@ -161,6 +161,7 @@ if (typeof document !== "undefined") (() => {
     document.body.append(dialog); dialog.showModal();
   }
   window.CarijoEditor = {
+    savedLocally(kind) { const session=sessions[kind];return !!session&&readDeviceDocuments().some(record=>record.id===session.localId&&record.plan_data?.documentText===targetFor(kind).innerText.trim()); },
     metadata(kind) { return sessions[kind]?.meta || metadata(kind); },
     sourcePlan() {
       const session = sessions.plan;

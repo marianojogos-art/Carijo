@@ -1,3 +1,4 @@
+import {usageAlerts} from './admin-alerts.mjs';
 import { summarizeUsage } from './admin-metrics.mjs';
 const money=value=>value===null||value===undefined?'Não disponível':new Intl.NumberFormat('pt-BR',{style:'currency',currency:'USD',maximumFractionDigits:4}).format(Number(value));
 const e=value=>escapeHtml(value);
@@ -6,7 +7,13 @@ page.innerHTML=`<div class="professional-workspace"><button class="back-link" id
 document.querySelector('main').append(page);
 const login=document.createElement('button');login.type='button';login.className='secondary-button';login.textContent='Entrar com a conta administrativa';login.onclick=()=>openAuthModal();$('#adminMessage').after(login);
 const nav=document.createElement('button');nav.type='button';nav.className='secondary-button admin-nav';nav.textContent='Administração';document.querySelector('.steps').append(nav);
-let lastReport=null;
+let lastReport=null,notificationSignature='',refreshSequence=0;
+const alertSettings=document.createElement('details');alertSettings.className='workspace-details';alertSettings.innerHTML='<summary>Alertas e acompanhamento</summary><p>Alertas locais, enquanto o painel estiver aberto. Nenhum limite de uso é imposto. O custo mostrado é uma estimativa, não a fatura.</p><div class="field-grid"><label>Alerta de falhas (%)<input id="alertFailures" type="number" min="1" max="100" value="20"></label><label>A partir de quantos pedidos<input id="alertMinimum" type="number" min="1" value="5"></label><label>Alerta de custo no intervalo (US$)<input id="alertCost" type="number" min="0" step="0.01" placeholder="Opcional"></label></div><label><input id="adminAutomatic" type="checkbox">Atualizar a cada minuto enquanto este painel estiver visível</label><button id="adminNotify" class="secondary-button">Autorizar notificações neste navegador</button><p id="adminNotificationStatus" role="status"></p>';$('#adminContent').before(alertSettings);
+$('#adminNotify').onclick=async()=>{if(!('Notification' in window)){ $('#adminNotificationStatus').textContent='Este navegador não oferece notificações.';return;}const permission=await Notification.requestPermission();$('#adminNotificationStatus').textContent=permission==='granted'?'Notificações autorizadas; ative a atualização automática.':'Sem permissão. Os alertas continuarão visíveis no painel.';};
+try{const preferences=JSON.parse(localStorage.getItem('carijo-admin-alert-settings')||'{}');for(const [id,key] of [['alertFailures','failureRate'],['alertMinimum','minRequests'],['alertCost','costUsd']])if(preferences[key]!==undefined)$('#'+id).value=preferences[key];}catch{}
+function settings(){return {failureRate:Number($('#alertFailures').value)||20,minRequests:Number($('#alertMinimum').value)||5,costUsd:Number($('#alertCost').value)||null};}
+alertSettings.querySelectorAll('input').forEach(input=>input.onchange=()=>{localStorage.setItem('carijo-admin-alert-settings',JSON.stringify(settings()));});
+setInterval(()=>{if(page.classList.contains('active')&&!document.hidden&&$('#adminAutomatic').checked&&!$('#adminRefresh').disabled)refresh();},60000);
 const today=new Date(), earlier=new Date(today);earlier.setDate(earlier.getDate()-30);
 const localDate=date=>new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-digit',day:'2-digit'}).format(date);
 $('#adminStart').value=localDate(earlier);$('#adminEnd').value=localDate(today);$('#rateDate').value=localDate(today)+'T00:00';
@@ -17,17 +24,21 @@ async function call(body){
   const data=await response.json();if(!response.ok)throw new Error(data.error||'Não foi possível consultar o painel.');
   const latest=(await supabaseClient.auth.getSession()).data.session;if(latest?.user?.id!==session.user.id)throw new Error('A conta mudou durante a consulta. Atualize o painel.');return data;
 }
+function notifyAdmin(body){try{new Notification('Carijó · acompanhamento',{body});}catch{$('#adminNotificationStatus').textContent='Este dispositivo não abriu a notificação. Consulte os alertas no painel.';}}
 function table(headers,rows){return `<div class="workspace-table-scroll"><table class="workspace-table"><thead><tr>${headers.map(h=>`<th>${e(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>`<tr>${row.map(x=>`<td>${e(x)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;}
 async function refresh(){
-  const button=$('#adminRefresh');button.disabled=true;$('#adminMessage').textContent='Consultando o consumo…';
+  const sequence=++refreshSequence;const button=$('#adminRefresh');button.disabled=true;$('#adminMessage').textContent='Consultando o consumo…';
   try{
     const end=new Date($('#adminEnd').value+'T00:00:00-03:00');end.setUTCDate(end.getUTCDate()+1);
     const data=await call({start:$('#adminStart').value+'T00:00:00-03:00',end:end.toISOString(),usdBrl:Number($('#adminExchange').value)||null});
-    lastReport=data;$('#adminCsv').disabled=false;const s=data.summary;
+    if(sequence!==refreshSequence)return;const previous=lastReport;lastReport=data;$('#adminCsv').disabled=false;const s=data.summary;
     $('#adminMessage').textContent=data.note+(data.truncated?' Atenção: intervalo excede o limite de consulta; reduza-o para obter totais completos.':'');
     $('#adminContent').innerHTML=`<div class="metric-grid">${[['Pedidos',s.requests],['Concluídos',s.succeeded],['Falhas',s.failed],['Em andamento',s.pending],['Entrada / saída',`${s.inputTokens} / ${s.outputTokens}`],['Custo conhecido (estimado)',money(s.knownCostUsd)],['Pedidos sem custo conhecido',s.unknownCost],['Uso incompleto',s.partialUsage]].map(([label,value])=>`<article class="metric-card"><small>${e(label)}</small><strong>${e(value)}</strong></article>`).join('')}</div>${s.knownCostBrl!==null?`<p>Conversão pelo câmbio informado: R$ ${s.knownCostBrl.toFixed(2)}. Não inclui tributos nem tarifas.</p>`:''}<h2>Consumo por usuário</h2>${table(['Usuário','Pedidos','Falhas','Entrada','Saída','Custo conhecido','Sem preço'],s.users.map(x=>[x.label,x.requests,x.failed,x.inputTokens,x.outputTokens,money(x.knownCostUsd),x.unknownCost]))}<h2>Modelos</h2>${table(['Modelo','Pedidos','Tokens em cache','Custo conhecido'],s.models.map(x=>[x.id,x.requests,x.cachedTokens,money(x.knownCostUsd)]))}<details class="workspace-details"><summary>Evolução diária</summary>${table(['Dia','Pedidos','Falhas','Custo conhecido'],s.days.map(x=>[x.id,x.requests,x.failed,money(x.knownCostUsd)]))}</details><details class="workspace-details"><summary>Últimos 200 pedidos do intervalo</summary>${table(['Quando','Usuário','Tipo / modelo','Estado','Tokens','Custo conhecido','Falha'],data.events.map(x=>[new Date(x.createdAt).toLocaleString('pt-BR'),x.user,`${x.type} / ${x.model}`,x.status,x.inputTokens===null?'Desconhecidos':`${x.inputTokens} / ${x.outputTokens}`,money(x.costUsd),x.error||'']))}</details>`;
+    const alerts=usageAlerts(s,settings()),signature=alerts.map(x=>x.id+':'+x.text).join('|');
+    const box=document.createElement('aside');box.className='admin-alerts';box.setAttribute('role','status');box.innerHTML='<h2>Alertas do intervalo</h2>'+(alerts.length?'<ul>'+alerts.map(x=>'<li>'+e(x.text)+'</li>').join('')+'</ul>':'<p>Nenhum limiar de alerta atingido.</p>');$('#adminContent').prepend(box);
+    if($('#adminAutomatic').checked&&window.Notification?.permission==='granted'&&previous){if(signature&&signature!==notificationSignature)notifyAdmin(alerts.map(x=>x.text).join(' ').slice(0,250));else if(s.requests>previous.summary.requests)notifyAdmin((s.requests-previous.summary.requests)+' novos pedidos no intervalo consultado.');}notificationSignature=signature;
     $('#rateList').innerHTML=table(['Modelo','Vigência','Entrada','Cache','Saída'],data.rates.map(x=>[x.model,new Date(x.valid_from).toLocaleString('pt-BR'),x.input_usd,x.cached_input_usd,x.output_usd]));
-  }catch(error){lastReport=null;$('#adminCsv').disabled=true;$('#adminContent').replaceChildren();$('#rateList').replaceChildren();$('#adminMessage').textContent=error.message;}
+  }catch(error){if(sequence!==refreshSequence)return;lastReport=null;$('#adminCsv').disabled=true;$('#adminContent').replaceChildren();$('#rateList').replaceChildren();$('#adminMessage').textContent=error.message;}
   finally{button.disabled=false;}
 }
 nav.onclick=()=>{showScreen('adminDashboard');refresh();};$('#adminBack').onclick=()=>showScreen('upload');$('#adminRefresh').onclick=refresh;
@@ -44,4 +55,4 @@ $('#adminCsv').onclick=()=>{
 };
 // Clear sensitive figures promptly when the session ends or changes account.
 let adminIdentity=null;
-supabaseClient?.auth.onAuthStateChange((_event,session)=>{const id=session?.user?.id||null;if(id!==adminIdentity){lastReport=null;$('#adminContent').replaceChildren();$('#rateList').replaceChildren();$('#adminCsv').disabled=true;$('#adminMessage').textContent='Atualize o painel após entrar com uma conta autorizada.';}adminIdentity=id;});
+supabaseClient?.auth.onAuthStateChange((_event,session)=>{const id=session?.user?.id||null;if(id!==adminIdentity){refreshSequence++;notificationSignature='';$('#adminAutomatic').checked=false;lastReport=null;$('#adminContent').replaceChildren();$('#rateList').replaceChildren();$('#adminCsv').disabled=true;$('#adminMessage').textContent='Atualize o painel após entrar com uma conta autorizada.';}adminIdentity=id;});

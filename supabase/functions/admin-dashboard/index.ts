@@ -30,7 +30,8 @@ Deno.serve(async req=>{
     const all:any[]=[];let truncated=false;
     for(const table of ['generation_events','carijo_generation_runs']) {
       for(let offset=0;offset<50000;offset+=1000){
-        const {data,error}=await db.from(table).select('*').gte('created_at',start.toISOString()).lt('created_at',end.toISOString()).order('created_at',{ascending:false}).range(offset,offset+999);
+        const fields='id,user_id,request_type,model,status,input_tokens,output_tokens,estimated_cost_usd,error_code,created_at'+(table==='carijo_generation_runs'?',cached_input_tokens,usage_complete,output_format':'');
+        const {data,error}=await db.from(table).select(fields).gte('created_at',start.toISOString()).lt('created_at',end.toISOString()).order('created_at',{ascending:false}).range(offset,offset+999);
         if(error)throw new Error('Não foi possível consultar o consumo.');
         all.push(...(data||[]).map(x=>({...x,source:table})));if((data||[]).length<1000)break;if(offset===49000)truncated=true;
       }

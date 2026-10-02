@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {checkPlan} from '../plan-quality.mjs';
+import {rubricScore,suggestedFeedback} from '../written-correction.mjs';
+import {usageAlerts} from '../admin-alerts.mjs';
+const q={rubric:[{criterion:'Argumentação',points:3},{criterion:'Exemplos',points:2}]};
+assert.equal(rubricScore(q,[2,2]),4);assert.equal(rubricScore(q,[null,2]),null);assert.equal(rubricScore(q,[4,2]),null);assert.equal(rubricScore(q,[NaN,2]),null);assert.equal(rubricScore(q,[]),null);
+assert.match(suggestedFeedback(q,[2,0]),/parcialmente atendido/);
+const text='Objetivos\nInvestigar jogos cooperativos.\nConteúdos\nJogos cooperativos.\nMetodologia\nEncontro 1\nEncontro 2\nRecursos didáticos\nBolas.\nAvaliação\nObservação.\nReferências\nMatriz.';
+const report=checkPlan(text,{planType:'fortnight',lessons:2,skillRecords:[{text:'Investigar jogos cooperativos.'},{text:'Analisar tradições artísticas regionais.'}]});
+assert.equal(report.items.find(x=>x.id==='lessons').status,'observed');assert.equal(report.items.find(x=>x.id==='skill-1').status,'review');assert.equal(report.items.at(-1).status,'human');
+assert.equal(checkPlan(text+'\nSemana 1',{planType:'quarter',lessons:24}).items.find(x=>x.id==='weekly').status,'review');
+assert.equal(usageAlerts({requests:10,failed:3,unknownCost:2,partialUsage:1,knownCostUsd:4},{costUsd:3}).length,4);
+assert.equal(usageAlerts({requests:1,failed:1,unknownCost:0,partialUsage:0,knownCostUsd:0}).length,0);
+console.log('Conferência documental, rubricas locais e alertas testados.');

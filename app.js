@@ -277,6 +277,7 @@ async function invokeFreeGeneration(prompt, requestType, options = {}) {
     const headers = { "Content-Type": "application/json" };
     const session = supabaseClient ? (await supabaseClient.auth.getSession()).data.session : null;
     if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+    if(window.CarijoRecovery){const data=await window.CarijoRecovery.request(`${SUPABASE_URL}/functions/v1/generate-plan-public`,headers,{prompt,requestType,sessionId,outputFormat:options.outputFormat},options.resume);return {data,error:null};}
     const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-plan-public`, {
       method: "POST", headers, body: JSON.stringify({ prompt, requestType, sessionId, outputFormat: options.outputFormat }),
     });
@@ -675,7 +676,7 @@ async function extractSpreadsheet(file, onProgress) {
 }
 
 function showScreen(id) {
-  $$(".screen").forEach(screen => screen.classList.toggle("active", screen.id === id));
+  $$(".screen").forEach(screen => { screen.classList.toggle("active", screen.id === id);screen.setAttribute("aria-hidden",String(screen.id!==id)); });
   const map = { upload: 0, processing: 0, review: 0, choose: 1, planForm: 2, activityBuilder: 2, result: 2 };
   const activeStep = map[id] ?? 0;
   $$(".step").forEach((step, index) => {
@@ -683,8 +684,20 @@ function showScreen(id) {
     step.classList.toggle("complete", index < activeStep);
     $(".step-state", step).textContent = index < activeStep ? "✓" : index === activeStep ? "●" : "○";
   });
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  window.scrollTo({ top: 0, behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
+  const heading=document.querySelector(`#${id} h1, #${id} h2`);if(heading){heading.setAttribute("tabindex","-1");heading.focus({preventScroll:true});}
 }
+
+window.acceptRecoveredPlan=async(data,context)=>{
+  if(!context||!data?.plan)throw new Error("O comprovante não contém a identificação do planejamento.");
+  generatedContext=context;state.planType=context.planType;supervisorReport=null;
+  $("#aiPlanText").textContent=data.plan;
+  renderGeneratedPlan(data.plan,{type:`PLANEJAMENTO ${context.planType==="quarter"?"TRIMESTRAL":"QUINZENAL"}`,title:`${context.subject} · planejamento ${context.planType==="quarter"?"trimestral":"quinzenal"}`,meta:`${context.className} · ${context.lessons} aulas`});
+  $("#aiPlanOutput").classList.add("hidden");renderSupervisorReport();
+  window.CarijoEditor.open({id:"local-"+crypto.randomUUID(),class_name:context.className,subject:context.subject,plan_type:context.planType,title:`${context.subject} · ${context.className}`,period_label:context.planType==="quarter"?`${context.quarter}º trimestre`:`${context.start} a ${context.end}`,plan_data:{generationContext:context,aiText:data.plan}},"plan");
+  await window.CarijoEditor.save("plan");showScreen("result");window.CarijoQuality?.refresh();
+  if(!window.CarijoEditor.savedLocally("plan"))throw new Error("O documento foi aberto, mas o armazenamento está cheio. Baixe uma cópia; o comprovante de recuperação foi preservado.");
+};
 
 function subjectOptionsHtml(selectedSubject) {
   const known = SUBJECT_OPTIONS.includes(selectedSubject);
@@ -1800,7 +1813,8 @@ async function generatePlanWithAI(initialGeneration = false) {
   $("#aiPlanText").textContent = "Seu planejamento está sendo elaborado e aprimorado pelo Assistente Pedagógico. Aguarde a versão final.";
   $("#copyAIPlan").textContent = "Aguarde";
   $("#aiPlanOutput").classList.remove("hidden");
-    const { data, error } = await invokeFreeGeneration(generationPrompt, "plan");
+    context.meetings=getMeetingFormat();context.references=selectedReferences();
+    const { data, error } = await invokeFreeGeneration(generationPrompt, "plan", {resume:{kind:"plan",context}});
     if (error) {
       let reason = error.message;
       if (typeof error.context?.json === "function") {
@@ -1823,6 +1837,7 @@ async function generatePlanWithAI(initialGeneration = false) {
     currentPlanId = null;
     notifyGenerationUsage(data.usage);
     window.CarijoEditor?.generated("plan");
+    if(window.CarijoEditor?.savedLocally?.("plan")!==false)window.CarijoRecovery?.complete();window.CarijoQuality?.refresh();
   } catch (error) {
     console.warn("Não foi possível gerar com IA.", error);
     const reason = error.message || "não foi possível concluir a geração";

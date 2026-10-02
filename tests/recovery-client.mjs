@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {webcrypto} from 'node:crypto';
+const memory=new Map(),requests=[];
+globalThis.localStorage={getItem:k=>memory.get(k)||null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)};
+globalThis.fetch=async(_url,options)=>{const body=JSON.parse(options.body);requests.push(body);return body.action==='status'?Response.json({status:'succeeded',result:{plan:'Resultado existente'}}):Response.json({status:'pending'},{status:202});};
+const {request,readPending}=await import('../generation-recovery.mjs');
+const args=['https://test.invalid',{}, {prompt:'Pedido',requestType:'plan',sessionId:webcrypto.randomUUID()},{kind:'plan',context:{className:'6º ano'}}];
+assert.equal((await request(...args)).plan,'Resultado existente');const identity=readPending();assert.equal(identity.prompt,undefined);assert.equal(identity.recoveryKey.length,72);assert.equal(requests[1].action,'status');
+await request(...args);assert.equal(requests[2].requestId,identity.requestId);assert.equal(requests[2].recoveryKey,identity.recoveryKey);
+await assert.rejects(request(args[0],{}, {...args[2],prompt:'Outro pedido'}),/Há um pedido recuperável/);
+globalThis.fetch=async()=>{throw new Error('Sem conexão');};await assert.rejects(request(...args));assert.equal(readPending().requestId,identity.requestId);
+console.log('Cliente: comprovante sem prompt, identidade reutilizada e preservação após falha de rede testados.');

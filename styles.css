@@ -922,3 +922,18 @@ input, select, textarea { color: var(--ink); }
 .professional-workspace label,.assessment-editor label,.professional-workspace .field-grid label { font-size:14px; text-transform:none; letter-spacing:0; }
 .professional-workspace input[type=file] { padding:6px; background:transparent; border:0; }
 @media(max-width:650px) { .professional-workspace { padding:24px 16px 64px; }.workspace-card,.workspace-details,.assessment-editor { padding:16px; }.workspace-controls { align-items:stretch; }.workspace-controls button { flex:1; } }
+/* Review workspaces: generous controls, quiet supporting choices, accessible focus. */
+.skip-link{position:fixed;left:1rem;top:-6rem;z-index:10000;background:#fff;color:#273b2b;padding:1rem;border-radius:.6rem}
+.skip-link:focus{top:1rem}
+:focus-visible{outline:3px solid #537653;outline-offset:4px}
+.quality-panel,.recovery-banner{max-width:1050px;margin:1.25rem auto;padding:1.5rem;background:#fffaf0;border:1px solid #d6cdbd;border-radius:18px}
+.connection-status{padding:1rem;background:#fff0d6;border-radius:12px;color:#493a21}.connection-status[hidden],.recovery-banner[hidden],.quality-panel[hidden]{display:none!important}
+.quality-list{padding-left:1.25rem;line-height:1.6}.quality-list li{padding:.5rem}.quality-list p{margin:.35rem 0;font-size:.95rem}
+.rubric-grid{display:grid;gap:1rem;margin:1rem 0}.rubric-grid label{background:#f8f5ed;border:1px solid #ded7c8;padding:1rem;border-radius:12px;display:grid;gap:.5rem}
+.rubric-grid input{max-width:10rem}.rubric-grid span{line-height:1.6}
+.admin-alerts{padding:1rem 1.5rem;border-left:4px solid #a96332;background:#fff6e9;border-radius:8px;margin:1rem 0}
+.professional-workspace textarea{line-height:1.6;min-height:90px;resize:vertical}
+.professional-workspace button,.workspace-details summary{min-height:44px}
+@media(max-width:640px){.professional-workspace{padding:1rem}.workspace-controls{gap:.7rem}.workspace-controls button{white-space:normal}.field-grid{grid-template-columns:1fr}.quality-panel,.recovery-banner{padding:1rem;margin:1rem .5rem}.workspace-table-scroll{max-width:100%;overflow-x:auto}.workspace-table th,.workspace-table td{padding:.8rem}.rubric-grid{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+@media print{.quality-panel,.recovery-banner,.admin-alerts,.skip-link,.connection-status{display:none!important}}
