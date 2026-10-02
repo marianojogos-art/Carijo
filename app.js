@@ -1803,10 +1803,18 @@ function updateAuthInterface() {
   const button = $("#authButton");
   const avatar = $(".avatar");
   if (!currentUser) {
-    name.textContent = "Modo local";
-    status.textContent = "Dados neste dispositivo";
-    button.textContent = "Entrar";
+    name.textContent = "Acesso livre";
+    status.textContent = "Preparando sessão…";
+    button.textContent = "Dados";
     avatar.textContent = "C";
+    return;
+  }
+  const anonymous = currentUser.is_anonymous === true || currentUser.app_metadata?.provider === "anonymous";
+  if (anonymous) {
+    name.textContent = "Acesso livre";
+    status.textContent = "Sessão deste navegador";
+    button.textContent = "Dados";
+    avatar.textContent = "CL";
     return;
   }
   const displayName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || currentUser.email?.split("@")[0] || "Professora";
@@ -1901,39 +1909,34 @@ async function handleAuthSession(session) {
 
 async function initializeAuth() {
   if (!supabaseClient) { console.warn("Cliente Supabase não carregado."); return; }
-  supabaseClient.auth.onAuthStateChange((event, session) => {
+  supabaseClient.auth.onAuthStateChange((_event, session) => {
     setTimeout(() => {
-      void handleAuthSession(session).catch(() => toast("Não foi possível sincronizar a conta agora."));
-      if (event === "PASSWORD_RECOVERY") {
-        passwordRecovery = true;
-        openAuthModal();
-        setAuthFeedback("Link validado. Digite sua nova senha e clique em salvar.");
-      }
+      void handleAuthSession(session).catch(() => toast("Não foi possível sincronizar a sessão agora."));
     }, 0);
   });
   try {
     const { data: { session }, error } = await supabaseClient.auth.getSession();
     if (error) throw error;
-    await handleAuthSession(session);
-  } catch { toast("O acesso não pôde ser restaurado. Entre novamente na sua conta."); }
-  finally { authReady = true; }
+    if (session) await handleAuthSession(session);
+    else {
+      const { data, error: anonymousError } = await supabaseClient.auth.signInAnonymously();
+      if (anonymousError) throw anonymousError;
+      await handleAuthSession(data.session);
+    }
+  } catch (error) {
+    console.warn("Não foi possível iniciar o acesso livre.", error);
+    toast("O acesso livre ainda não pôde ser iniciado. Recarregue a página em instantes.");
+  } finally {
+    authReady = true;
+  }
 }
 
 function openAuthModal() {
-  if (!supabaseClient) { toast("Não foi possível carregar o serviço de autenticação"); return; }
-  setAuthFeedback();
-  $("#authModalTitle").textContent = passwordRecovery ? "Defina sua nova senha" : "Seu espaço no Carijó";
-  $("#authEmail").closest("label").classList.toggle("hidden", passwordRecovery);
-  $(".auth-email-actions").classList.toggle("hidden", passwordRecovery);
-  $("#resetPassword").classList.toggle("hidden", passwordRecovery);
-  $("#updatePassword").classList.toggle("hidden", !passwordRecovery);
-  $("#authPassword").autocomplete = passwordRecovery ? "new-password" : "current-password";
-  showModalElement($("#authModal"));
+  toast("O acesso é livre e não exige e-mail nem senha.");
 }
 
 function closeAuthModal() {
-  $("#authPassword").value = "";
-  hideModalElement($("#authModal"));
+  // Mantido para compatibilidade com sessões antigas durante a transição.
 }
 
 function authEmail() {
@@ -2322,7 +2325,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $$('[data-close-irony]').forEach(button => button.addEventListener("click", closeIronyModal));
   $("#brandButton").addEventListener("click", openBrandModal);
   $$('[data-close-brand]').forEach(button => button.addEventListener("click", closeBrandModal));
-  $("#authButton").addEventListener("click", () => currentUser ? openDataModal() : openAuthModal());
+  $("#authButton").addEventListener("click", openDataModal);
   $$('[data-close-data]').forEach(button => button.addEventListener("click", closeDataModal));
   $("#exportData").addEventListener("click", exportLocalData);
   $("#openHistory").addEventListener("click", openHistory);
@@ -2337,19 +2340,8 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   $("#importData").addEventListener("change", importLocalData);
   $("#clearData").addEventListener("click", clearLocalData);
-  $("#deleteCloudData").addEventListener("click", deleteCloudAccount);
   $("#privacyButton").addEventListener("click", openPrivacyModal);
-  $("#privacyAuthButton").addEventListener("click", () => { closeAuthModal(); openPrivacyModal(); });
   $$('[data-close-privacy]').forEach(button => button.addEventListener("click", closePrivacyModal));
-  $("#signOutButton").addEventListener("click", signOut);
-  $$('[data-close-auth]').forEach(button => button.addEventListener("click", closeAuthModal));
-  $("#signInEmail").addEventListener("click", signInWithEmail);
-  $("#signUpEmail").addEventListener("click", signUpWithEmail);
-  $("#resetPassword").addEventListener("click", resetPassword);
-  $("#updatePassword").addEventListener("click", updatePassword);
-  $("#authPassword").addEventListener("keydown", event => {
-    if (event.key === "Enter") { event.preventDefault(); void (passwordRecovery ? updatePassword() : signInWithEmail()); }
-  });
   $("#copyPrompt").addEventListener("click", async () => { await navigator.clipboard.writeText($("#promptText").value); toast("Prompt copiado"); });
   $("#generatePlan").addEventListener("click", generateFinalDocument);
   $("#generateWithAI").addEventListener("click", () => generatePlanWithAI(false));
@@ -2369,7 +2361,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#saveActivity").addEventListener("click", saveActivityToHistory);
   $("#printActivity").addEventListener("click", printActivity);
   configureEditorToolbar($("#activityEditorToolbar"), $("#activityAIText"));
-  $("#usagePill").addEventListener("click", () => usageState ? toast(`Restam ${usageState.remaining} de ${usageState.limit} gerações neste mês`) : (currentUser ? loadUsageStatus() : openAuthModal()));
+  $("#usagePill").addEventListener("click", () => usageState ? toast(`Restam ${usageState.remaining} de ${usageState.limit} gerações neste mês`) : (currentUser ? loadUsageStatus() : toast("A sessão livre ainda está sendo preparada.")));
   $(".mobile-menu").addEventListener("click", event => { const open = $(".sidebar").classList.toggle("open"); event.currentTarget.setAttribute("aria-expanded", String(open)); });
   $$(".sidebar button").forEach(button => button.addEventListener("click", () => { $(".sidebar").classList.remove("open"); $(".mobile-menu").setAttribute("aria-expanded", "false"); }));
   document.addEventListener("keydown", event => {

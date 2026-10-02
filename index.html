@@ -52,7 +52,7 @@
       <div class="profile">
         <div class="avatar">MC</div>
         <div><strong id="authUserName">Modo local</strong><small id="authUserState">Dados neste dispositivo</small></div>
-        <button id="authButton" aria-label="Entrar ou sair" title="Acessar conta">Entrar</button>
+        <button id="authButton" aria-label="Abrir dados e cópias de segurança" title="Dados e cópias de segurança">Dados</button>
       </div>
     </aside>
 
@@ -492,11 +492,9 @@
         <button class="primary-button" id="exportData">Baixar backup <span>↓</span></button>
         <label class="secondary-button import-button">Importar backup<input id="importData" type="file" accept="application/json,.json" /></label>
         <button class="text-button danger-button" id="clearData">Apagar dados deste dispositivo</button>
-        <button class="text-button danger-button" id="deleteCloudData">Excluir conta e dados da nuvem</button>
         <button class="text-button" id="privacyButton">Privacidade e uso da IA</button>
-        <button class="text-button" id="signOutButton">Sair da conta</button>
       </div>
-      <p class="data-footnote">Com uma conta conectada, suas turmas são sincronizadas automaticamente. O backup continua disponível para quando a nuvem decidir que também precisa de um plano B.</p>
+      <p class="data-footnote">No acesso livre, uma sessão técnica deste navegador protege seus dados e sua cota sem pedir e-mail nem senha. O backup continua disponível para quando a nuvem decidir que também precisa de um plano B.</p>
     </div>
   </div>
 
@@ -537,33 +535,15 @@
       <button class="primary-button" id="downloadSge">Baixar planilha .xlsx</button>
     </div>
   </div>
-  <div class="modal" id="authModal" aria-hidden="true">
-    <div class="modal-backdrop" data-close-auth></div>
-    <div class="modal-card auth-modal-card" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
-      <button class="modal-close" data-close-auth aria-label="Fechar">×</button>
-      <div class="eyebrow"><span>◌</span> SUA CONTA</div>
-      <h2 id="authModalTitle">Seu espaço no Carijó</h2>
-      <p>Entre com e-mail e senha para acessar suas turmas, documentos e cota. Sem peregrinação por contas de outras plataformas.</p>
-      <p class="privacy-inline">Não informe nomes, diagnósticos ou dados identificáveis de estudantes. Os dados usados na geração são enviados à API da OpenAI. <button type="button" class="text-button" id="privacyAuthButton">Ler política de privacidade</button></p>
-      <label class="auth-field">E-mail<input id="authEmail" type="email" autocomplete="email" placeholder="voce@escola.edu.br" /></label>
-      <label class="auth-field">Senha<input id="authPassword" type="password" autocomplete="current-password" placeholder="Sua senha" /></label>
-      <p class="privacy-inline">Se já acessava pelo Google, use “Esqueci minha senha” com o mesmo e-mail para definir uma senha e manter sua conta.</p>
-      <div class="auth-email-actions"><button class="primary-button" id="signInEmail">Entrar</button><button class="secondary-button" id="signUpEmail">Criar conta</button></div>
-      <button class="text-button" id="resetPassword">Esqueci minha senha</button>
-      <button class="primary-button hidden" id="updatePassword">Salvar nova senha</button>
-      <p class="auth-feedback" id="authFeedback" role="status"></p>
-    </div>
-  </div>
-
   <div class="modal" id="privacyModal" aria-hidden="true">
     <div class="modal-backdrop" data-close-privacy></div>
     <article class="modal-card privacy-modal-card" role="dialog" aria-modal="true" aria-labelledby="privacyTitle">
       <button class="modal-close" data-close-privacy aria-label="Fechar">×</button>
       <div class="eyebrow"><span>§</span> PRIVACIDADE, PORQUE ATÉ A SÁTIRA PRECISA DE LIMITES</div>
       <h2 id="privacyTitle">Como o Carijó trata seus dados</h2>
-      <p><strong>Turmas e preferências.</strong> Ficam neste dispositivo e, quando você entra, são sincronizadas com sua conta no Supabase.</p>
+      <p><strong>Turmas e preferências.</strong> Ficam neste dispositivo e são associadas a uma sessão técnica anônima no Supabase. Não é necessário informar e-mail nem senha.</p>
       <p><strong>Geração por IA.</strong> O pedido pedagógico é enviado à API da OpenAI para produzir o documento. Não escreva nomes, diagnósticos, contatos ou qualquer dado que identifique estudantes.</p>
-      <p><strong>Histórico.</strong> Só é salvo quando você solicita. Cada usuário acessa exclusivamente os próprios registros por meio de políticas de segurança no banco.</p>
+      <p><strong>Histórico.</strong> Só é salvo quando você solicita. Cada navegador acessa exclusivamente os registros de sua sessão por meio de políticas de segurança no banco.</p>
       <p><strong>Exclusão.</strong> Você pode apagar os dados locais separadamente ou excluir turmas, configurações, histórico e registros de uso armazenados na nuvem.</p>
       <p><strong>Responsabilidade.</strong> O resultado é um rascunho automatizado. Cabe ao professor revisar a adequação pedagógica, curricular e ética antes do uso.</p>
       <div class="modal-actions"><button class="primary-button" data-close-privacy>Entendi e continuarei sem nomes de estudantes</button></div>
