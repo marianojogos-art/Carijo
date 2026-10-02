@@ -1,10 +1,10 @@
 /* Document versions are data, not executable HTML. All rendering passes through
    the same allow-list sanitizer used by the document and print views. */
 const CarijoVersions = {
-  append(versions, html, text, label = "Edição") {
+  append(versions, html, text, label = "Edição", assessment = null) {
     const previous = Array.isArray(versions) ? versions : [];
-    if (previous.at(-1)?.html === html) return previous;
-    const next = { id: crypto.randomUUID(), html, text, label, at: new Date().toISOString() };
+    if (previous.at(-1)?.html === html && JSON.stringify(previous.at(-1)?.assessment || null) === JSON.stringify(assessment)) return previous;
+    const next = { id: crypto.randomUUID(), html, text, label, assessment: assessment ? JSON.parse(JSON.stringify(assessment)) : null, at: new Date().toISOString() };
     // Keep the original and the 29 most recent checkpoints.
     const all = [...previous, next];
     return all.length > 30 ? [all[0], ...all.slice(-29)] : all;
@@ -50,9 +50,10 @@ if (typeof document !== "undefined") (() => {
     const target = targetFor(session.kind);
     const html = sanitizeDocumentHtml(target.innerHTML);
     const text = target.innerText.trim();
-    if (checkpoint) session.versions = CarijoVersions.append(session.versions, html, text, label);
-    return { ...session.meta, id: undefined, user_id: null, document_html: html,
-      plan_data: { ...session.meta.plan_data, ...(session.kind === "activity" ? {assessment: window.CarijoAssessments?.current() || null} : {}), versions: session.versions, editorVersion: 2, documentText: text,
+    const assessment = session.kind === "activity" ? window.CarijoAssessments?.current() || null : null;
+    if (checkpoint) session.versions = CarijoVersions.append(session.versions, html, text, label, assessment);
+    return { ...session.meta, ...(session.kind === "activity" && assessment ? {title:assessment.title} : {}), id: undefined, user_id: null, document_html: html,
+      plan_data: { ...session.meta.plan_data, ...(session.kind === "activity" ? {assessment} : {}), versions: session.versions, editorVersion: 3, documentText: text,
         savedAt: new Date().toISOString(), cloudId: session.cloudId || null, cloudOwner: session.owner || null } };
   }
   function localWrite(session, payload) {
@@ -147,22 +148,34 @@ if (typeof document !== "undefined") (() => {
     dialog.querySelector(".restore-version").onclick = () => {
       const version = selected();
       if (!version || !window.confirm("Restaurar esta versão? O texto atual continuará no histórico de versões.")) return;
+      if (kind === "activity") window.CarijoAssessments?.restoreVersion(version.assessment || null);
       targetFor(kind).innerHTML = sanitizeDocumentHtml(version.html);
-      if (kind === "activity") currentActivityText = version.text;
+      if (kind === "activity") {
+        currentActivityText = version.text;
+        const assessment = window.CarijoAssessments?.current();
+        if (assessment) $("#activityOutputTitle").textContent = assessment.title;
+      }
       persist(kind, false, "Versão restaurada"); sections(kind); close();
-      toast("Versão recuperada. As demais versões foram preservadas.");
+      toast(kind === "activity" ? "Versão recuperada. Revise e aprove novamente o gabarito. Versões antigas sem questões não permitem correção por câmera." : "Versão recuperada. As demais versões foram preservadas.");
     };
     document.body.append(dialog); dialog.showModal();
   }
   window.CarijoEditor = {
     metadata(kind) { return sessions[kind]?.meta || metadata(kind); },
+    sourcePlan() {
+      const session = sessions.plan;
+      if (!session) return null;
+      const payload = capture(session, "Recorte para avaliação");
+      localWrite(session, payload);
+      return { ...payload, id: session.localId, updated_at: payload.plan_data.savedAt };
+    },
     save: persist,
     open(record, kind) {
       sessions[kind] = makeSession(kind, record);
       const target = targetFor(kind); target.contentEditable = "false"; target.classList.remove("editing");
       document.querySelector(kind === "plan" ? "#planEditorToolbar" : "#activityEditorToolbar").classList.add("hidden");
       document.querySelector(kind === "plan" ? "#editPlan" : "#editActivity").textContent = "Editar documento";
-      sessions[kind].versions = CarijoVersions.append(sessions[kind].versions, sanitizeDocumentHtml(target.innerHTML), target.innerText.trim(), "Documento original");
+      sessions[kind].versions = CarijoVersions.append(sessions[kind].versions, sanitizeDocumentHtml(target.innerHTML), target.innerText.trim(), "Documento original", kind === "activity" ? record.plan_data?.assessment || null : null);
       status(kind, "Documento carregado · alterações salvas automaticamente"); sections(kind);
     },
     generated(kind) {
@@ -182,6 +195,7 @@ if (typeof document !== "undefined") (() => {
       target.before(bar); bar.querySelector("button").onclick = () => revisions(kind);
       target.addEventListener("input", () => {
         if (!sessions[kind]) return;
+        if (kind === "activity") window.CarijoAssessments?.invalidateDocument();
         if (kind === "activity") currentActivityText = target.innerText.trim();
         // Local recovery is synchronous, including the last character before closing.
         try { localWrite(sessions[kind], capture(sessions[kind], "Edição", false)); status(kind, "Salvo localmente · aguardando sincronização"); }

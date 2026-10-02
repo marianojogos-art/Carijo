@@ -1038,6 +1038,7 @@ function syncActivityGrade() {
 }
 
 function openActivityBuilder() {
+  window.CarijoAssessments?.clearSource();
   if (!state.classes.length) { toast("Adicione pelo menos uma turma para continuar"); showScreen("upload"); return; }
   currentPlanId = null;
   currentActivityText = "";
@@ -1054,6 +1055,8 @@ function skillsForActivity() {
   const grade = gradeFromClass(item);
   const subject = normalizeSubjectForMatrix(item.subject);
   const trimester = Number($("#activityQuarter").value || 1);
+  const inherited = window.CarijoAssessments?.sourceSkills();
+  if (inherited) return inherited;
   return skillCatalog.filter(skill => !skill.grade || (skill.grade === grade && skill.subject === subject && (!skill.trimester || skill.trimester === trimester)));
 }
 
@@ -1063,7 +1066,7 @@ function renderActivitySkills() {
   const available = skillsForActivity();
   const availableKeys = new Set(available.map(skillKey));
   state.activitySkills = new Set([...state.activitySkills].filter(key => availableKeys.has(key)));
-  if (!state.activitySkills.size) available.slice(0, 3).forEach(skill => state.activitySkills.add(skillKey(skill)));
+  if (!state.activitySkills.size && !window.CarijoAssessments?.sourceSkills()) available.slice(0, 3).forEach(skill => state.activitySkills.add(skillKey(skill)));
   container.innerHTML = available.length ? available.map(skill => {
     const key = skillKey(skill);
     const selected = state.activitySkills.has(key);
@@ -1706,8 +1709,8 @@ function openSavedDocument(plan) {
     $("#activityAIText").innerHTML = plan.document_html ? sanitizeDocumentHtml(plan.document_html) : generatedTextToHtml(currentActivityText);
     $("#activityOutput").classList.remove("hidden");
     showScreen("activityBuilder");
-    window.CarijoEditor?.open(plan, "activity");
     window.CarijoAssessments?.restore(plan.plan_data?.assessment || null);
+    window.CarijoEditor?.open(plan, "activity");
     $("#activityOutput").scrollIntoView({ block: "start" });
     return;
   }
@@ -1787,7 +1790,7 @@ async function generatePlanWithAI(initialGeneration = false) {
   try {
   const generationPrompt = buildPrompt();
   const item = getSelectedClass();
-  const context = { planType: state.planType, className: item.name, subject: item.subject, quarter: Number($("#recorteQuarter").value), start: $("#dateStart").value, end: $("#dateEnd").value, lessons: state.planType === "quarter" ? item.lessons * 12 : getMeetingFormat().total, skills: selectedSkills().map(skill => `${skill.text} (${skillCodeLabel(skill)})`) };
+  const context = { planType: state.planType, className: item.name, subject: item.subject, quarter: Number($("#recorteQuarter").value), start: $("#dateStart").value, end: $("#dateEnd").value, lessons: state.planType === "quarter" ? item.lessons * 12 : getMeetingFormat().total, skills: selectedSkills().map(skill => `${skill.text} (${skillCodeLabel(skill)})`), skillRecords: selectedSkills().map(skill => ({...skill})), resources: selectedResources(), duration: Number($("#lessonDuration").value) || 45, classroomContext: [$("#classProfile").value, $("#recurringNotes").value, $("#accessibility").value, $("#teacherNotes").value].filter(Boolean).join("; ") };
   if (initialGeneration === true) showScreen("result");
   button.disabled = true;
   button.textContent = "Gerando…";

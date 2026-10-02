@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+node_modules/
+.wrangler/
+*.log
+*.local
+*.pem
+*.key
+Carijo_correcoes_privadas*.json
+Carijo_notas*.xlsx

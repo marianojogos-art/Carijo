@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {planSource,sourcePrompt} from '../assessment-source.mjs';
+const record={id:'local-plan',class_id:4,class_name:'6º ano',subject:'Educação Física',title:'Lutas',period_label:'2º trimestre',plan_data:{documentText:'Objetivos: experimentar lutas. Conteúdos: respeito.',versions:[{id:'v1'}],generationContext:{quarter:2,skillRecords:[{id:'manual',text:'Relacionar lutas e artes marciais.',code:''}],resources:['Espaço externo da escola'],classroomContext:'Leitura mediada',duration:50}}};
+const source=planSource(record);
+assert.equal(source.versionId,'v1');assert.equal(source.quarter,2);assert.equal(source.skills[0].code,'');assert.equal(source.duration,50);
+source.skills[0].text='Editado';assert.notEqual(record.plan_data.generationContext.skillRecords[0].text,'Editado');
+assert(sourcePrompt(source,'Apenas respeito nas lutas').includes('Apenas respeito nas lutas'));
+assert(sourcePrompt(source,'').includes('não é necessário avaliar todo o trimestre'));
+assert.equal(sourcePrompt(null,''),'');
+assert.equal(planSource({...record,plan_data:{aiText:'Texto antigo',generationContext:{skills:['Habilidade sem BNCC']}}}).skills[0].text,'Habilidade sem BNCC');
+assert.throws(()=>planSource({plan_data:{}}));
+console.log('Origem do planejamento: versão, trimestre, contexto, habilidades sem código, legado e recorte verificados.');
