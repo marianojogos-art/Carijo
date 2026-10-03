@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const nodes=new Map();const $=id=>{if(!nodes.has(id))nodes.set(id,{textContent:'',innerHTML:'',disabled:false,classList:{add(){}},setAttribute(name,value){this[name]=value;}});return nodes.get(id);};
+const start=source.indexOf('function setPlanResultState('),end=source.indexOf('async function generatePlanWithAI(',start);
+const context=vm.createContext({$});vm.runInContext(source.slice(start,end),context);
+vm.runInContext('setPlanResultState("generating")',context);
+assert.equal($('#result')['aria-busy'],'true');assert.match($('#planResultStatus').textContent,/ELABORANDO/);assert.doesNotMatch($('#planResultHeading').innerHTML,/rascunho está pronto/);assert.equal($('#printPlan').disabled,true);
+vm.runInContext('setPlanResultState("ready")',context);assert.match($('#planResultHeading').innerHTML,/rascunho está pronto/);assert.equal($('#printPlan').disabled,false);
+vm.runInContext('setPlanResultState("failed")',context);assert.equal($('#copyPlan').disabled,true);assert.match($('#planResultHeading').innerHTML,/ainda não/);
+vm.runInContext('setPlanResultState("failed",true)',context);assert.match($('#planResultHeading').innerHTML,/anterior foi preservada/);assert.equal($('#printPlan').disabled,false);
+const generation=source.slice(end,source.indexOf('async function generateFinalDocument()',end));
+assert(generation.indexOf('setPlanResultState("generating")')<generation.indexOf('showScreen("result")'));
+assert(generation.indexOf('setPlanResultState("ready")')>generation.indexOf('await invokeFreeGeneration'));
+assert(!html.includes('DOCUMENTO PRODUZIDO'),'O HTML inicial não pode anunciar conclusão.');
+console.log('Resultado: processamento, sucesso, falha e documento anterior preservado verificados.');

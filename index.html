@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="carijo-release" content="2026-10-02-revisao-recuperacao" />
+  <meta name="carijo-release" content="2026-10-03-estado-geracao" />
   <meta name="description" content="Carijó — planejamento pedagógico para professores da Rede Municipal de Florianópolis." />
   <meta name="referrer" content="no-referrer" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://cdn.jsdelivr.net https://tessdata.projectnaptha.com https://zfztuvkrejskelaomoan.supabase.co wss://zfztuvkrejskelaomoan.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'" />
@@ -382,8 +382,8 @@
         <div class="result-shell">
           <div class="result-top">
             <div>
-              <div class="eyebrow"><span>✓</span> DOCUMENTO PRODUZIDO</div>
-              <h1>O rascunho está pronto.<br><em>A autoria continua sua.</em></h1>
+              <div class="eyebrow" id="planResultStatus" role="status">PLANEJAMENTO</div>
+              <h1 id="planResultHeading">Seu planejamento.<br><em>A autoria continua sua.</em></h1>
             </div>
             <div class="result-actions"><button class="secondary-button" id="generateWithAI">Gerar nova versão <span>✦</span></button><button class="secondary-button" id="editPlan">Editar documento</button><button class="secondary-button" id="savePlan">Salvar no histórico</button><button class="secondary-button" id="copyPlan">Copiar texto</button><button class="primary-button" id="printPlan">Imprimir / PDF <span>↓</span></button></div>
           </div>

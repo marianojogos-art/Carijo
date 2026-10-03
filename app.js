@@ -1411,6 +1411,7 @@ function buildPlan() {
       <div class="lesson-content"><span class="lesson-kicker">${isQuarter ? `EIXO TEMÁTICO · ≈ ${item.lessons * 4} AULAS` : isBand ? `AULA-FAIXA · ${block.size} AULAS · ${minutes} MIN` : `AULA SIMPLES · ${format.duration} MIN`}</span><h4>${escapeHtml(action)}</h4><p>${isQuarter ? `Foco do eixo: ${escapeHtml(profile.focus)}. Desenvolver o recorte ${escapeHtml(theme)} por meio de ${escapeHtml(action)}, articulando investigação, produção, partilha e retomadas conforme as necessidades que emergirem. Evidência de acompanhamento: ${escapeHtml(evidence)}.` : createActivityDescription(profile, action, minutes, theme, evidence)}${isBand ? ` Organização da faixa: retomada, aprofundamento e síntese ao longo das ${block.size} aulas consecutivas.` : ""}</p><div class="lesson-tags"><span>${escapeHtml(evidence)}</span><span>${escapeHtml(selectedResources()[index % Math.max(selectedResources().length, 1)] || "Recurso a definir")}</span><span>${escapeHtml(isQuarter ? `${item.lessons * 4} aulas estimadas` : slot)}</span></div></div>
     </article>`;
   }).join("");
+  setPlanResultState("ready");
   showScreen("result");
 }
 
@@ -1474,6 +1475,7 @@ function renderGeneratedPlan(plan, metadata = {}) {
       <div class="generated-plan-body">${blocks.join("")}</div>
     </div>`;
   $("#planDocument").classList.remove("hidden");
+  setPlanResultState("ready");
 }
 
 function sanitizeDocumentHtml(html) {
@@ -1740,6 +1742,7 @@ function openSavedDocument(plan) {
   }
   showScreen("result");
   window.CarijoEditor?.open(plan, "plan");
+  setPlanResultState("ready");
 }
 
 async function duplicateSavedDocument(plan) {
@@ -1797,6 +1800,17 @@ function closeHistory() {
   hideModalElement($("#historyModal"));
 }
 
+function setPlanResultState(status, previous = false) {
+  const pending = status === "generating";
+  $("#result").setAttribute("aria-busy", String(pending));
+  $("#generateWithAI").disabled=pending;
+  $("#copyAIPlan").disabled=pending;
+  if(pending)$("#generationUsageNotice").classList.add("hidden");
+  $("#planResultStatus").textContent = pending ? "ELABORANDO E REVISANDO" : status === "ready" ? "✓ DOCUMENTO PRODUZIDO" : previous ? "NOVA VERSÃO NÃO CONCLUÍDA" : "GERAÇÃO NÃO CONCLUÍDA";
+  $("#planResultHeading").innerHTML = pending ? "O planejamento está sendo preparado.<br><em>A máquina ainda está trabalhando.</em>" : status === "ready" ? "O rascunho está pronto.<br><em>A autoria continua sua.</em>" : previous ? "A versão anterior foi preservada.<br><em>A nova tentativa não terminou.</em>" : "O rascunho ainda não está pronto.<br><em>Confira os detalhes abaixo.</em>";
+  for(const id of ["editPlan", "savePlan", "copyPlan", "printPlan", "exportSge"]) $("#"+id).disabled = pending || (status === "failed" && !previous);
+}
+
 async function generatePlanWithAI(initialGeneration = false) {
   if (!await confirmGeneration()) return;
   const button = initialGeneration ? $("#generatePlan") : $("#generateWithAI");
@@ -1804,6 +1818,7 @@ async function generatePlanWithAI(initialGeneration = false) {
   const generationPrompt = buildPrompt();
   const item = getSelectedClass();
   const context = { planType: state.planType, className: item.name, subject: item.subject, quarter: Number($("#recorteQuarter").value), start: $("#dateStart").value, end: $("#dateEnd").value, lessons: state.planType === "quarter" ? item.lessons * 12 : getMeetingFormat().total, skills: selectedSkills().map(skill => `${skill.text} (${skillCodeLabel(skill)})`), skillRecords: selectedSkills().map(skill => ({...skill})), resources: selectedResources(), duration: Number($("#lessonDuration").value) || 45, classroomContext: [$("#classProfile").value, $("#recurringNotes").value, $("#accessibility").value, $("#teacherNotes").value].filter(Boolean).join("; ") };
+  setPlanResultState("generating");
   if (initialGeneration === true) showScreen("result");
   button.disabled = true;
   button.textContent = "Gerando…";
@@ -1834,6 +1849,7 @@ async function generatePlanWithAI(initialGeneration = false) {
     renderGeneratedPlan(data.plan, { type: `PLANEJAMENTO ${context.planType === "quarter" ? "TRIMESTRAL" : "QUINZENAL"} · 2026`, title: `${context.subject} · planejamento ${context.planType === "quarter" ? "trimestral" : "quinzenal"}`, meta: `${context.className} · ${context.lessons} aulas · ${context.planType === "quarter" ? `${context.quarter}º trimestre · 12 semanas` : `${context.start} a ${context.end}`}` });
     renderSupervisorReport();
     $("#aiPlanOutput").classList.add("hidden");
+    setPlanResultState("ready");
     currentPlanId = null;
     notifyGenerationUsage(data.usage);
     window.CarijoEditor?.generated("plan");
@@ -1846,6 +1862,7 @@ async function generatePlanWithAI(initialGeneration = false) {
     $("#copyAIPlan").textContent = "Copiar detalhes";
     $("#aiPlanOutput").classList.remove("hidden");
     $("#planDocument").classList.toggle("hidden", !generatedContext);
+    setPlanResultState("failed", Boolean(generatedContext));
     renderSupervisorReport();
     toast("Os detalhes da falha estão disponíveis na tela");
   } finally {
