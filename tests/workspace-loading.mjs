@@ -9,7 +9,7 @@ import {buildWorkbook} from '../sge-workbook.mjs';
 import {planSource,sourcePrompt} from '../assessment-source.mjs';
 import {rubricScore,suggestedFeedback} from '../written-correction.mjs';
 import {usageAlerts} from '../admin-alerts.mjs';
-import {createCaptureGate} from '../camera-capture.mjs';
+import {createContinuousCapture} from '../camera-capture.mjs';
 const nodes=new Map(),memory=new Map();
 class Element {
  constructor(){this.value='';this.textContent='';this.listeners={};this.classes=new Set();this.classList={contains:x=>this.classes.has(x),add:x=>this.classes.add(x),remove:x=>this.classes.delete(x)};}
@@ -29,7 +29,7 @@ let saved=0;
 let sourceRecords=[];
 const assessment={title:'Avaliação de adição',instructions:'Leia.',teacherNotes:'Uso do professor',accessibility:'Leitura mediada',questions:[{type:'multiple_choice',prompt:'2 + 2?',options:['3','4'],correctIndex:1,expectedAnswer:'4',skill:'Adição',difficulty:'easy',points:1,rubric:[]}]};
 const context=vm.createContext({document,window:{addEventListener(){},dispatchEvent(){}},localStorage:{getItem:k=>memory.get(k)||null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)},crypto:webcrypto,Event,structuredClone,console,setTimeout,clearTimeout,setInterval:()=>0,rubricScore,suggestedFeedback,usageAlerts,printDocument(){},MutationObserver:class{observe(){}},validateAssessment,assessmentStudentHtml,gradeAssessment,answerSheetSvg,scanSheet,fingerprint,printHtml,buildWorkbook,rosterFromWorkbook(){},recognizeLocalText(){},escapeHtml:s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'),$:s=>nodes.get(s),toast(){},state:{classes:[{id:1,name:'5º A',subject:'Matemática'}]},currentActivityText:'',generationInProgress:false,activityPrompt:()=> 'Pedido curricular',confirmGeneration:async()=>true,invokeFreeGeneration:async(_prompt,type,options)=>{assert.equal(type,'activity');assert.equal(options.outputFormat,'assessment');return {data:{assessment,usage:{}},error:null};},notifyGenerationUsage(){},supabaseClient:{auth:{onAuthStateChange(){}}},SUPABASE_URL:'https://test.invalid',showScreen(){}});
-context.window.CarijoEditor={generated(){saved++;}};context.createCaptureGate=createCaptureGate;
+context.window.CarijoEditor={generated(){saved++;}};context.createContinuousCapture=createContinuousCapture;
 Object.assign(context,{planSource,sourcePrompt,readDeviceDocuments:()=>sourceRecords,skillsForActivity:()=>context.window.CarijoAssessments.sourceSkills()||[],skillKey:s=>s.id||s.code,state:{classes:[{id:1,name:'5º A',subject:'Matemática'}],activitySkills:new Set()},openActivityBuilder(){context.window.CarijoAssessments.clearSource();},syncActivityGrade(){nodes.get('#activityGrade').value='5';},renderActivitySkills(){},renderActivityProfileSummary(){}});
 for(const name of ['assessment-ui.mjs','correction-ui.mjs','admin-ui.mjs']){
  const source=readFileSync(new URL('../'+name,import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'').replace(/export (function|async function)/g,'$1');
@@ -72,8 +72,16 @@ context.scanSheet=()=>({student:1,bits:Array(96).fill(0),corners:[[40,40],[760,4
 nodes.get('#correctionVideo').videoWidth=800;nodes.get('#correctionVideo').videoHeight=370;
 await nodes.get('#cameraStart').onclick();assert.equal(nodes.get('#cameraViewport').lastScroll.block,'center');
 for(time=350;time<=1050;time+=350){const [id,fn]=timers.entries().next().value;timers.delete(id);fn();}
-assert.equal(stopped,1,'Auto-capture stops the camera after a stable reading');assert.equal(timers.size,0,'No repeated captures after showing result');
-assert(nodes.get('#cameraResultIdentity').textContent.includes('Maria'));assert(nodes.get('#cameraResultScore').textContent.includes('10 / 10'));assert.equal(nodes.get('#cameraResult').lastScroll.block,'center');
+assert.equal(stopped,0,'A leitura mantém a câmera aberta');assert.equal(timers.size,1);
+assert(nodes.get('#cameraResultIdentity').textContent.includes('Maria'));assert(nodes.get('#cameraResultScore').textContent.includes('10 / 10'));
+assert.equal(JSON.parse(memory.get('carijo-corrections-local-v1')).readings.length,1);
+for(time=1400;time<=4200;time+=350){const [id,fn]=timers.entries().next().value;timers.delete(id);fn();}
+assert.equal(JSON.parse(memory.get('carijo-corrections-local-v1')).readings.length,1,'A mesma folha não se repete');
+const firstScanner=context.scanSheet;context.scanSheet=()=>({...firstScanner(),student:0});context.decodeCard=()=>0;
+for(time=4550;time<=5250;time+=350){const [id,fn]=timers.entries().next().value;timers.delete(id);fn();}
+assert.equal(JSON.parse(memory.get('carijo-corrections-local-v1')).readings.length,2,'A próxima folha fica guardada sem apagar a primeira');
+assert.equal(JSON.parse(memory.get('carijo-corrections-local-v1')).readings[0].name,'Maria');
+assert.equal(stopped,0);context.scanSheet=firstScanner;context.decodeCard=()=>1;
 assert.equal(JSON.parse(memory.get('carijo-corrections-local-v1')).results.length,0,'Reading must not silently save a grade');
 let resolvePermission;context.navigator.mediaDevices.getUserMedia=()=>new Promise(resolve=>{resolvePermission=resolve;});
 const pendingCamera=nodes.get('#cameraStart').onclick();nodes.get('#cameraStop').onclick();resolvePermission({getTracks:()=>[{stop(){stopped++;}}]});await pendingCamera;

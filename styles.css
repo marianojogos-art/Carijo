@@ -900,6 +900,9 @@ input, select, textarea { color: var(--ink); }
 .camera-viewport #correctionCanvas { max-width:100%; max-height:220px; margin:0 auto; object-fit:contain; }
 .camera-guide { display:none; pointer-events:none; position:absolute; inset:12%; border:2px dashed rgba(255,255,255,.8); border-radius:14px; }
 .camera-live .camera-guide { display:block; }
+.camera-live #correctionCanvas{display:none!important}
+.scan-station .camera-result{padding:16px 20px;margin:12px 0}.scan-station .camera-result h3{font-size:16px}.scan-station .camera-result p{margin:6px 0}
+.pending-reading{display:flex;flex-direction:column;align-items:flex-start;gap:6px;width:100%;margin:8px 0;text-align:left}.pending-reading span{font-size:13px;font-weight:400}
 .camera-guide span { position:absolute; bottom:12px; left:50%; transform:translateX(-50%); width:max-content; max-width:95%; padding:6px 12px; color:white; background:rgba(0,0,0,.65); font-size:12px; border-radius:8px; text-align:center; }
 .camera-status { text-align:center; min-height:1.5em; line-height:1.5; }
 .scan-station{padding:clamp(20px,3vw,36px);border:1px solid #d9d3c4;background:linear-gradient(140deg,#fffdf7,#f7f6ee);box-shadow:0 12px 34px rgba(48,57,40,.06)}

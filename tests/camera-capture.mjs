@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {createCaptureGate} from '../camera-capture.mjs';
+import {createCaptureGate,createContinuousCapture} from '../camera-capture.mjs';
 import {sheetLayout,answerSheetSvg,scanSheet,encodeCard,SHEET} from '../omr.mjs';
 const a={id:'camera-test',title:'Gabarito',questions:[{id:'q1',type:'multiple_choice',options:['A','B'],correctIndex:1}]};
 const layout=sheetLayout(a);
@@ -23,4 +23,17 @@ const gate=createCaptureGate();assert.equal(gate.observe(read,800,layout.height,
 gate.reset();gate.observe(read,800,layout.height,0);assert.equal(gate.observe({...read,corners:read.corners.map(([x,y])=>[x+40,y])},800,layout.height,700),false,'Motion restarts stability');
 gate.observe(null,800,layout.height,1000);assert.equal(gate.observe(read,800,layout.height,1400),false,'Losing the sheet resets detection');
 assert.equal(createCaptureGate().observe({...read,corners:[[1,1],[10,1],[10,10],[1,10]]},800,1100,2000),false,'Tiny sheets must not auto-capture');
-console.log('Câmera: folha compacta, legado, rotação, estabilidade, movimento e perda de enquadramento verificados.');
+const continuous=createContinuousCapture(),named={...read,student:1};
+for(const t of [0,350])assert.equal(continuous.observe(named,800,layout.height,t),'steady');
+assert.equal(continuous.observe(named,800,layout.height,700),'ready');continuous.accept(named,700);
+assert.equal(continuous.observe(named,800,layout.height,1000),'showing');
+continuous.missing(3000);continuous.missing(4000);
+assert.equal(continuous.observe({...named,answers:[]},800,layout.height,4100),'already-read');
+const next={...read,student:2};for(const t of [4200,4550])assert.equal(continuous.observe(next,800,layout.height,t),'steady');
+assert.equal(continuous.observe(next,800,layout.height,4900),'ready');continuous.accept(next,4900);
+continuous.reset();const anonymous={...read,student:0};continuous.accept(anonymous,0);
+assert.equal(continuous.observe(anonymous,800,layout.height,3000),'already-read');
+continuous.missing(3100);continuous.missing(4100);
+for(const t of [4200,4550])assert.equal(continuous.observe(anonymous,800,layout.height,t),'steady');
+assert.equal(continuous.observe(anonymous,800,layout.height,4900),'ready');
+console.log('Câmera: estabilidade, leitura contínua, próxima folha e proteção contra duplicações verificadas.');

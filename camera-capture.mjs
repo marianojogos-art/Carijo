@@ -12,3 +12,21 @@ export function createCaptureGate(){
   return count>=3&&now-since>=700;
  }};
 }
+
+// Identified sheets are accepted once per camera session. Anonymous sheets need
+// a visible removal before another copy can be accepted.
+export function createContinuousCapture(){
+ const gate=createCaptureGate(),seen=new Set();let last=null,acceptedAt=-Infinity,missingSince=null,removed=false;
+ const identity=scan=>JSON.stringify([scan.student,scan.bits]);
+ return {
+  reset(){gate.reset();seen.clear();last=null;acceptedAt=-Infinity;missingSince=null;removed=false;},
+  missing(now){gate.reset();if(missingSince===null)missingSince=now;if(now-missingSince>=900)removed=true;},
+  observe(scan,width,height,now){
+   const key=identity(scan);missingSince=null;
+   if(now-acceptedAt<2200){gate.reset();return 'showing';}
+   if(scan.student>0&&seen.has(key)||scan.student===0&&key===last&&!removed){gate.reset();return 'already-read';}
+   return gate.observe(scan,width,height,now)?'ready':'steady';
+  },
+  accept(scan,now){const key=identity(scan);last=key;acceptedAt=now;removed=false;missingSince=null;if(scan.student>0)seen.add(key);gate.reset();}
+ };
+}
