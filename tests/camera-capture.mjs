@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {createCaptureGate,createContinuousCapture} from '../camera-capture.mjs';
 import {sheetLayout,answerSheetSvg,scanSheet,encodeCard,SHEET} from '../omr.mjs';
+import {readPng,cropImage} from './png-image.mjs';
 const a={id:'camera-test',title:'Gabarito',questions:[{id:'q1',type:'multiple_choice',options:['A','B'],correctIndex:1}]};
 const layout=sheetLayout(a);
 assert(layout.height<500);assert(layout.height<SHEET.height);
@@ -12,6 +13,14 @@ function synthetic(source,assessment=a){const image={width:800,height:source.hei
  encodeCard(assessment,0,source===SHEET?2:3).forEach((bit,i)=>{if(bit)black(208+(i%48)*8,150+Math.floor(i/48)*16,6,10);});assessment.questions.forEach((q,i)=>black(324,214+i*SHEET.rowStep,12,12));return image;
 }
 const compact=synthetic(layout),read=scanSheet(compact,a);
+const shaded={...compact,data:new Uint8ClampedArray(compact.data)};
+for(let y=0;y<shaded.height;y++)for(let x=0;x<shaded.width;x++){const p=(y*shaded.width+x)*4,light=(compact.data[p]===0?75:190)+Math.round(x/shaded.width*45);shaded.data[p]=light;shaded.data[p+1]=light-10;shaded.data[p+2]=light-22;}
+assert.equal(scanSheet(shaded,a).answers[0].answer,1,'Faint ink, warm light and a paper shadow must not block recognition');
+if(process.argv[2]){
+ const photo=cropImage(readPng(process.argv[2]),129,194,638,359),probe={id:'photo-regression',questions:Array.from({length:10},(_,i)=>({id:'q'+i,type:'multiple_choice',options:['A','B','C','D']}))};
+ assert.throws(()=>scanSheet(photo,probe),/não corresponde à avaliação/,'The local photograph code must be decoded and validated before rejecting the intentionally different assessment');
+ console.log('Captura real: código validado; avaliação diferente corretamente bloqueada.');
+}
 assert.equal(read.answers[0].answer,1);assert.equal(read.layoutHeight,layout.height);
 assert.equal(scanSheet(synthetic(SHEET),a).answers[0].answer,1,'Legacy sheets remain readable');
 const thirty={...a,questions:Array.from({length:30},(_,i)=>({...a.questions[0],id:`q${i+1}`}))};

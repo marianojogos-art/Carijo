@@ -905,6 +905,7 @@ input, select, textarea { color: var(--ink); }
 .pending-reading{display:flex;flex-direction:column;align-items:flex-start;gap:6px;width:100%;margin:8px 0;text-align:left}.pending-reading span{font-size:13px;font-weight:400}
 .camera-guide span { position:absolute; bottom:12px; left:50%; transform:translateX(-50%); width:max-content; max-width:95%; padding:6px 12px; color:white; background:rgba(0,0,0,.65); font-size:12px; border-radius:8px; text-align:center; }
 .camera-status { text-align:center; min-height:1.5em; line-height:1.5; }
+.scan-key-setup{padding:16px 20px;margin:16px 0;background:#f0f3e9;border:1px solid #c0c8b3;border-radius:14px}.scan-key-setup p{font-size:13px;line-height:1.6;margin:8px 0}.scan-key-setup button[hidden]{display:none}.scan-station .camera-status:not(:empty){padding:14px 18px;margin:12px 0;background:#fff3dc;border:1px solid #d5bf89;border-radius:12px;font-weight:600}
 .scan-station{padding:clamp(20px,3vw,36px);border:1px solid #d9d3c4;background:linear-gradient(140deg,#fffdf7,#f7f6ee);box-shadow:0 12px 34px rgba(48,57,40,.06)}
 .scan-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}.scan-heading h2{margin:8px 0;font-size:clamp(22px,3vw,29px)}.scan-heading p{margin:0;line-height:1.6;color:#65715f}
 .scan-eyebrow{font-size:10px;letter-spacing:.12em;font-weight:750;color:#627450}.scan-badge{flex-shrink:0;border:1px solid #d8decf;background:#edf1e7;color:#42543b;border-radius:99px;padding:9px 14px;font-size:12px;font-weight:700}

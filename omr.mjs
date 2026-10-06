@@ -6,7 +6,7 @@ export function fingerprint(a){let hash=2166136261;for(const c of JSON.stringify
 export function registrationFingerprint(value){let hash=2166136261;for(const c of String(value??''))hash=Math.imul(hash^c.charCodeAt(0),16777619);return hash>>>0;}
 function crc(bytes){let value=0;for(const byte of bytes){value^=byte;for(let i=0;i<8;i++)value=(value&128)?((value<<1)^7)&255:(value<<1)&255;}return value;}
 export function encodeCard(a,student,layoutVersion=3){if(![2,3].includes(layoutVersion))throw new Error('Modelo de folha inválido.');const hash=fingerprint(a),id=typeof student==='object'?student.machineId:student,registration=registrationFingerprint(typeof student==='object'?student.registration:'');const bytes=[hash>>>24,(hash>>>16)&255,(hash>>>8)&255,hash&255,id>>>8,id&255,registration>>>24,(registration>>>16)&255,(registration>>>8)&255,registration&255,layoutVersion];bytes.push(crc(bytes));return bytes.flatMap(byte=>Array.from({length:8},(_,i)=>(byte>>(7-i))&1));}
-export function decodeCard(bits,a,registration){if(bits.length!==96)throw new Error('Código de folha inválido.');const bytes=Array.from({length:12},(_,i)=>bits.slice(i*8,i*8+8).reduce((sum,bit)=>(sum<<1)|bit,0));if(bytes[11]!==crc(bytes.slice(0,11))||![2,3].includes(bytes[10]))throw new Error('Código ilegível. Refaça a foto com melhor luz e sem cortes.');const hash=((bytes[0]<<24)|(bytes[1]<<16)|(bytes[2]<<8)|bytes[3])>>>0;if(hash!==fingerprint(a))throw new Error('Esta folha não corresponde à avaliação e ao gabarito atuais. Selecione a avaliação correta.');const identity=((bytes[6]<<24)|(bytes[7]<<16)|(bytes[8]<<8)|bytes[9])>>>0;if(registration!==undefined&&identity!==registrationFingerprint(registration))throw new Error('A matrícula desta folha não corresponde ao cadastro. Restaure o cadastro original ou imprima uma nova folha.');return(bytes[4]<<8)|bytes[5];}
+export function decodeCard(bits,a,registration){if(bits.length!==96)throw new Error('Código de folha inválido.');const bytes=Array.from({length:12},(_,i)=>bits.slice(i*8,i*8+8).reduce((sum,bit)=>(sum<<1)|bit,0));if(bytes[11]!==crc(bytes.slice(0,11))||![2,3].includes(bytes[10]))throw new Error('Código ilegível. Refaça a foto com melhor luz e sem cortes.');const hash=((bytes[0]<<24)|(bytes[1]<<16)|(bytes[2]<<8)|bytes[3])>>>0;if(hash!==fingerprint(a))throw new Error('Esta folha não corresponde à avaliação e ao gabarito atuais. Selecione a avaliação correta.');const identity=((bytes[6]<<24)|(bytes[7]<<16)|(bytes[8]<<8)|bytes[9])>>>0;if(registration!==undefined&&identity!==registrationFingerprint(registration))throw new Error('A matrícula desta folha não corresponde ao cadastro. Restaure o cadastro original ou imprima uma nova folha.');const student=(bytes[4]<<8)|bytes[5];if(student===0&&identity!==registrationFingerprint(''))throw new Error('Código ilegível. Aproxime a folha e evite reflexos.');return student;}
 export function answerSheetSvg(a,student={machineId:0,name:'',registration:''}){
   const questions=a.questions.filter(q=>q.type==='multiple_choice');if(!questions.length)throw new Error('A avaliação não tem questões de múltipla escolha.');
   const bits=encodeCard(a,student);
@@ -20,6 +20,16 @@ export function homography(source,destination){
 }
 export function grayscale(image){const out=new Uint8Array(image.width*image.height);for(let i=0;i<out.length;i++)out[i]=Math.round(image.data[i*4]*.299+image.data[i*4+1]*.587+image.data[i*4+2]*.114);return out;}
 function threshold(gray){const hist=new Uint32Array(256);for(const x of gray)hist[x]++;let sum=0;for(let i=0;i<256;i++)sum+=i*hist[i];let weight=0,partial=0,best=-1,cut=128;for(let i=0;i<255;i++){weight+=hist[i];partial+=i*hist[i];if(!weight||weight===gray.length)continue;const score=weight*(gray.length-weight)*(partial/weight-(sum-partial)/(gray.length-weight))**2;if(score>best){best=score;cut=i;}}return Math.min(200,cut+10);}
+function localInk(gray,width,height){
+ const stride=width+1,integral=new Uint32Array(stride*(height+1)),ink=new Uint8Array(gray.length),radius=Math.max(12,Math.min(48,Math.round(Math.min(width,height)*.04)));
+ for(let y=0;y<height;y++){let sum=0;for(let x=0;x<width;x++){sum+=gray[y*width+x];integral[(y+1)*stride+x+1]=integral[y*stride+x+1]+sum;}}
+ for(let y=0;y<height;y++)for(let x=0;x<width;x++){
+  const left=Math.max(0,x-radius),right=Math.min(width,x+radius+1),top=Math.max(0,y-radius),bottom=Math.min(height,y+radius+1);
+  const mean=(integral[bottom*stride+right]-integral[top*stride+right]-integral[bottom*stride+left]+integral[top*stride+left])/((right-left)*(bottom-top));
+  ink[y*width+x]=gray[y*width+x]<Math.min(mean*.88,mean-12)?0:255;
+ }
+ return ink;
+}
 function markers(gray,width,height,cut){
   const seen=new Uint8Array(gray.length),stack=new Int32Array(gray.length),candidates=[];
   for(let i=0;i<gray.length;i++){
@@ -49,10 +59,22 @@ function markers(gray,width,height,cut){
   if(!sets.length)throw new Error('Não encontrei as quatro marcas. Mostre as quatro marcas pretas, sem cortar a área do gabarito.');
   return sets;
 }
-function scanLayout(image,a,gray,cut,corners,layout){
+function scanLayout(image,a,gray,cut,corners,layout,sourceGray=gray){
   const map=homography(layout.corners,corners);
   const density=(x,y,r=4)=>{let black=0,count=0;for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++)if(dx*dx+dy*dy<=r*r){const[u,v]=map(x+dx,y+dy);const px=Math.round(u),py=Math.round(v);if(px<0||py<0||px>=image.width||py>=image.height)throw new Error('Folha cortada na imagem.');black+=gray[py*image.width+px]<cut?1:0;count++;}return black/count;};
-  const bits=Array.from({length:96},(_,i)=>density(211+(i%48)*8,155+Math.floor(i/48)*16,1)>.5?1:0),student=decodeCard(bits,a);
+  // Measure each code cell against the paper immediately above and below it.
+  // Bilinear samples preserve faint, small print in real camera photographs.
+  const light=(x,y)=>{const[u,v]=map(x,y),px=Math.floor(u),py=Math.floor(v);if(px<0||py<0||px+1>=image.width||py+1>=image.height)throw new Error('Folha cortada na imagem.');const dx=u-px,dy=v-py;return sourceGray[py*image.width+px]*(1-dx)*(1-dy)+sourceGray[py*image.width+px+1]*dx*(1-dy)+sourceGray[(py+1)*image.width+px]*(1-dx)*dy+sourceGray[(py+1)*image.width+px+1]*dx*dy;};
+  let bits,student,codeError,identityError;
+  const adjustments=[[0,0],[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[1,-1],[-1,1],[1,1],[-2,0],[2,0],[0,-2],[0,2],[-2,-2],[2,-2],[-2,2],[2,2]];
+  // Marker centres can move by a couple of camera pixels on blurred paper.
+  // Refine only the barcode sampling, never the answer coordinates or bits.
+  for(let y=-10;y<=10;y++)for(let x=-8;x<=8;x++)if(!adjustments.some(p=>p[0]===x&&p[1]===y))adjustments.push([x,y]);
+  for(const [ox,oy] of adjustments){
+   bits=Array.from({length:96},(_,i)=>{const x=211+(i%48)*8+ox,y=155+Math.floor(i/48)*16+oy;let value=0;for(const dx of [-1,0,1])for(const dy of [-2,0,2])value+=light(x+dx,y+dy);value/=9;const paper=(light(x,y-9)+light(x,y+9))/2;return value<Math.min(paper*.9,paper-12)?1:0;});
+   try{student=decodeCard(bits,a);codeError=null;break;}catch(error){if(error.message.includes('não corresponde à avaliação'))identityError=error;codeError=error;}
+  }
+  if(codeError)throw identityError||codeError;
   const layoutVersion=bits.slice(80,88).reduce((value,bit)=>(value<<1)|bit,0);
   if(layoutVersion!==(layout===SHEET?2:3))throw new Error('O código desta folha exige outro modelo de alinhamento.');
   const answers=a.questions.filter(q=>q.type==='multiple_choice').map((q,i)=>{
@@ -64,11 +86,11 @@ function scanLayout(image,a,gray,cut,corners,layout){
   return{student,corners,answers,bits,layoutHeight:layout.height};
 }
 export function scanSheet(image,a,manualCorners=null){
-  const gray=grayscale(image),cut=threshold(gray),sets=manualCorners?[manualCorners]:markers(gray,image.width,image.height,cut);
+  const gray=grayscale(image),ink=localInk(gray,image.width,image.height),sets=manualCorners?[manualCorners]:markers(ink,image.width,image.height,128);
   let failure,identityFailure;
   // Recognize compact sheets and sheets printed before this update, in any rotation.
   for(const corners of sets)for(const layout of [sheetLayout(a),SHEET])for(let turn=0;turn<(manualCorners?1:4);turn++){
-    try{return scanLayout(image,a,gray,cut,corners.map((_,i)=>corners[(i+turn)%4]),layout);}catch(error){failure=error;if(error.message.includes('não corresponde à avaliação'))identityFailure=error;}
+    try{return scanLayout(image,a,ink,128,corners.map((_,i)=>corners[(i+turn)%4]),layout,gray);}catch(error){failure=error;if(error.message.includes('não corresponde à avaliação'))identityFailure=error;}
   }
   throw identityFailure||failure||new Error('Não foi possível ler a folha.');
 }
