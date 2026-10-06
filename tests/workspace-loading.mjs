@@ -78,4 +78,17 @@ assert.equal(JSON.parse(memory.get('carijo-corrections-local-v1')).results.lengt
 let resolvePermission;context.navigator.mediaDevices.getUserMedia=()=>new Promise(resolve=>{resolvePermission=resolve;});
 const pendingCamera=nodes.get('#cameraStart').onclick();nodes.get('#cameraStop').onclick();resolvePermission({getTracks:()=>[{stop(){stopped++;}}]});await pendingCamera;
 assert.equal(stopped,2,'A late camera permission cannot restart a stopped session');assert.equal(timers.size,0);
+assert.equal(nodes.get('#readSheet').disabled,true,'Sem foto, a leitura fica indisponível');
+context.createImageBitmap=async()=>({width:800,height:370,close(){}});
+const photoField=nodes.get('#correctionPhoto');photoField.files=[{size:1000,type:'image/png'}];photoField.value='photo.png';
+await photoField.onchange({target:photoField});
+assert.equal(photoField.value,'','A mesma imagem pode ser escolhida novamente');
+assert.equal(nodes.get('#cameraResult').classList.contains('hidden'),false,'Foto carregada deve ser lida automaticamente com gabarito aprovado');
+assert(nodes.get('#cameraResultIdentity').textContent.includes('Maria'));assert.equal(nodes.get('#readSheet').disabled,false);
+assert.equal(JSON.parse(memory.get('carijo-corrections-local-v1')).results.length,0,'Carregar foto não salva notas automaticamente');
+nodes.get('#rotatePhoto').onclick();assert.equal(nodes.get('#cameraResult').classList.contains('hidden'),true,'Girar invalida a prévia anterior');
+let resolveImage;context.createImageBitmap=()=>new Promise(resolve=>resolveImage=resolve);
+const pendingPhoto=photoField.onchange({target:photoField});nodes.get('#cameraStop').onclick();let imageClosed=false;resolveImage({width:800,height:370,close(){imageClosed=true;}});await pendingPhoto;
+assert.equal(imageClosed,true,'Uma foto atrasada é descartada ao mudar a sessão');
+context.confirm=()=>true;nodes.get('#clearScanPhoto').onclick();assert.equal(nodes.get('#correctionCanvas').hidden,true);assert.equal(nodes.get('#readSheet').disabled,true);assert.equal(nodes.get('#scanEmpty').hidden,false);
 console.log('Inicialização dos espaços de avaliação, correção e administração e geração estruturada verificadas com DOM simulado.');
