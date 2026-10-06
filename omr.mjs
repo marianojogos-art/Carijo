@@ -29,8 +29,25 @@ function markers(gray,width,height,cut){
     if(w>Math.max(5,width*.008)&&w<width*.15&&h>Math.max(5,height*.008)&&h<height*.15&&w/h>.55&&w/h<1.8&&count/(w*h)>.75)candidates.push({point:[(minX+maxX)/2,(minY+maxY)/2],area:count});
   }
   const points=[[0,0],[width,0],[width,height],[0,height]].map(([cx,cy])=>candidates.filter(c=>(c.point[0]<width/2)===(cx===0)&&(c.point[1]<height/2)===(cy===0)).sort((a,b)=>b.area-a.area)[0]?.point);
-  if(points.some(x=>!x))throw new Error('Não encontrei as quatro marcas. Fotografe a folha inteira ou marque os cantos manualmente.');
-  return points;
+  const sets=points.every(Boolean)?[points]:[];
+  // A sheet can be offset in a landscape camera image. Its corners need not
+  // occupy the four quadrants of the full frame. Rank convex groups of marks
+  // and let the sheet barcode and checksum validate the actual geometry.
+  const marks=candidates.sort((a,b)=>b.area-a.area).slice(0,16),groups=[];
+  for(let i=0;i<marks.length-3;i++)for(let j=i+1;j<marks.length-2;j++)for(let k=j+1;k<marks.length-1;k++)for(let l=k+1;l<marks.length;l++){
+    const group=[marks[i],marks[j],marks[k],marks[l]];
+    if(group[0].area/group[3].area>4)continue;
+    const cx=group.reduce((n,m)=>n+m.point[0],0)/4,cy=group.reduce((n,m)=>n+m.point[1],0)/4;
+    const quad=group.map(m=>m.point).sort((a,b)=>Math.atan2(a[1]-cy,a[0]-cx)-Math.atan2(b[1]-cy,b[0]-cx));
+    const cross=quad.map((p,n)=>{const q=quad[(n+1)%4],r=quad[(n+2)%4];return(q[0]-p[0])*(r[1]-q[1])-(q[1]-p[1])*(r[0]-q[0]);});
+    if(!cross.every(x=>x>0))continue;
+    const area=Math.abs(quad.reduce((n,p,i)=>{const q=quad[(i+1)%4];return n+p[0]*q[1]-q[0]*p[1];},0))/2;
+    if(area<width*height*.02||quad.some((p,n)=>Math.hypot(p[0]-quad[(n+1)%4][0],p[1]-quad[(n+1)%4][1])<Math.sqrt(group[0].area)*3))continue;
+    groups.push({quad,area});
+  }
+  groups.sort((a,b)=>b.area-a.area);sets.push(...groups.slice(0,24).map(g=>g.quad));
+  if(!sets.length)throw new Error('Não encontrei as quatro marcas. Mostre as quatro marcas pretas, sem cortar a área do gabarito.');
+  return sets;
 }
 function scanLayout(image,a,gray,cut,corners,layout){
   const map=homography(layout.corners,corners);
@@ -47,11 +64,11 @@ function scanLayout(image,a,gray,cut,corners,layout){
   return{student,corners,answers,bits,layoutHeight:layout.height};
 }
 export function scanSheet(image,a,manualCorners=null){
-  const gray=grayscale(image),cut=threshold(gray),corners=manualCorners||markers(gray,image.width,image.height,cut);
-  let failure;
+  const gray=grayscale(image),cut=threshold(gray),sets=manualCorners?[manualCorners]:markers(gray,image.width,image.height,cut);
+  let failure,identityFailure;
   // Recognize compact sheets and sheets printed before this update, in any rotation.
-  for(const layout of [sheetLayout(a),SHEET])for(let turn=0;turn<(manualCorners?1:4);turn++){
-    try{return scanLayout(image,a,gray,cut,corners.map((_,i)=>corners[(i+turn)%4]),layout);}catch(error){failure=error;}
+  for(const corners of sets)for(const layout of [sheetLayout(a),SHEET])for(let turn=0;turn<(manualCorners?1:4);turn++){
+    try{return scanLayout(image,a,gray,cut,corners.map((_,i)=>corners[(i+turn)%4]),layout);}catch(error){failure=error;if(error.message.includes('não corresponde à avaliação'))identityFailure=error;}
   }
-  throw failure||new Error('Não foi possível ler a folha.');
+  throw identityFailure||failure||new Error('Não foi possível ler a folha.');
 }

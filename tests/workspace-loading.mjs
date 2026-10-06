@@ -71,6 +71,10 @@ context.navigator={mediaDevices:{getUserMedia:async()=>({getTracks:()=>[{stop(){
 context.scanSheet=()=>({student:1,bits:Array(96).fill(0),corners:[[40,40],[760,40],[760,330],[40,330]],answers:[{id:'q1',answer:1,state:'read'}]});context.decodeCard=()=>1;
 nodes.get('#correctionVideo').videoWidth=800;nodes.get('#correctionVideo').videoHeight=370;
 await nodes.get('#cameraStart').onclick();assert.equal(nodes.get('#cameraViewport').lastScroll.block,'center');
+const scannerBeforeFailure=context.scanSheet;context.scanSheet=()=>{throw new Error('Esta folha não corresponde à avaliação e ao gabarito atuais. Selecione a avaliação correta.');};
+{const [id,fn]=timers.entries().next().value;timers.delete(id);fn();}
+assert(nodes.get('#cameraStatus').textContent.includes('Selecione a avaliação correta'),'A câmera deve explicar o motivo da falha');
+assert.equal(timers.size,1,'Uma falha de reconhecimento não pode interromper a leitura automática');context.scanSheet=scannerBeforeFailure;
 for(time=350;time<=1050;time+=350){const [id,fn]=timers.entries().next().value;timers.delete(id);fn();}
 assert.equal(stopped,0,'A leitura mantém a câmera aberta');assert.equal(timers.size,1);
 assert(nodes.get('#cameraResultIdentity').textContent.includes('Maria'));assert(nodes.get('#cameraResultScore').textContent.includes('10 / 10'));

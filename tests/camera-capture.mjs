@@ -19,6 +19,21 @@ for(const shape of [SHEET,sheetLayout(thirty)]){const result=scanSheet(synthetic
 const rotated={width:compact.height,height:compact.width,data:new Uint8ClampedArray(compact.data.length)};
 for(let y=0;y<compact.height;y++)for(let x=0;x<compact.width;x++){const from=(y*compact.width+x)*4,to=(x*rotated.width+compact.height-1-y)*4;rotated.data.set(compact.data.subarray(from,from+4),to);}
 assert.equal(scanSheet(rotated,a).answers[0].answer,1,'Automatic reading handles sideways sheets');
+function cameraFrame(source,width,height,left,top,scale=1){
+ const frame={width,height,data:new Uint8ClampedArray(width*height*4).fill(255)};
+ for(let y=0;y<Math.round(source.height*scale);y++)for(let x=0;x<Math.round(source.width*scale);x++){
+  const sourcePixel=(Math.floor(y/scale)*source.width+Math.floor(x/scale))*4,target=((top+y)*width+left+x)*4;
+  frame.data.set(source.data.subarray(sourcePixel,sourcePixel+4),target);
+ }
+ return frame;
+}
+for(const frame of [cameraFrame(compact,1800,1200,50,80),cameraFrame(compact,1280,720,150,80,.5),cameraFrame(rotated,1800,1200,50,80)]){
+ const result=scanSheet(frame,a);assert.equal(result.answers[0].answer,1,'Offset sheets must be read even when all four marks share a camera quadrant');
+}
+assert.throws(()=>scanSheet(compact,{...a,id:'wrong-assessment'}),/não corresponde à avaliação/,'Wrong keys must remain blocked with a useful message');
+const exposureGate=createCaptureGate();exposureGate.observe(read,800,layout.height,0);
+exposureGate.observe({...read,answers:[{id:'q1',answer:null,state:'uncertain'}]},800,layout.height,350);
+assert.equal(exposureGate.observe(read,800,layout.height,700),true,'Exposure variations in an answer must not prevent capture of a stable, valid sheet');
 const gate=createCaptureGate();assert.equal(gate.observe(read,800,layout.height,0),false);assert.equal(gate.observe(read,800,layout.height,350),false);assert.equal(gate.observe(read,800,layout.height,700),true);
 gate.reset();gate.observe(read,800,layout.height,0);assert.equal(gate.observe({...read,corners:read.corners.map(([x,y])=>[x+40,y])},800,layout.height,700),false,'Motion restarts stability');
 gate.observe(null,800,layout.height,1000);assert.equal(gate.observe(read,800,layout.height,1400),false,'Losing the sheet resets detection');
