@@ -10,7 +10,7 @@ import {planSource,sourcePrompt} from '../assessment-source.mjs';
 import {rubricScore,suggestedFeedback} from '../written-correction.mjs';
 import {usageAlerts} from '../admin-alerts.mjs';
 import {createContinuousCapture} from '../camera-capture.mjs';
-const nodes=new Map(),memory=new Map();
+const nodes=new Map(),memory=new Map(),downloads=[];
 class Element {
  constructor(){this.value='';this.textContent='';this.listeners={};this.classes=new Set();this.classList={contains:x=>this.classes.has(x),add:x=>this.classes.add(x),remove:x=>this.classes.delete(x)};}
  set innerHTML(html){this.html=html;this.innerText=html.replace(/<[^>]*>/g,'');for(const match of html.matchAll(/id="([^"]+)"/g))nodes.set('#'+match[1],new Element());}
@@ -20,6 +20,7 @@ class Element {
  getContext(){return {drawImage(){},getImageData:()=>({}),translate(){},rotate(){},setTransform(){}}}remove(){}showModal(){}close(){}
  set id(value){this.elementId=value;nodes.set('#'+value,this);}get id(){return this.elementId;}
  async play(){}
+ click(){if(this.download)downloads.push({name:this.download,href:this.href});this.onclick?.();}
  setAttribute(){}
 }
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');for(const match of html.matchAll(/id="([^"]+)"/g))nodes.set('#'+match[1],new Element());nodes.set('main',new Element());nodes.set('.steps',new Element());nodes.set('#activityBuilder .generate-row',new Element());
@@ -110,4 +111,34 @@ let resolveImage;context.createImageBitmap=()=>new Promise(resolve=>resolveImage
 const pendingPhoto=photoField.onchange({target:photoField});nodes.get('#cameraStop').onclick();let imageClosed=false;resolveImage({width:800,height:370,close(){imageClosed=true;}});await pendingPhoto;
 assert.equal(imageClosed,true,'Uma foto atrasada é descartada ao mudar a sessão');
 context.confirm=()=>true;nodes.get('#clearScanPhoto').onclick();assert.equal(nodes.get('#correctionCanvas').hidden,true);assert.equal(nodes.get('#readSheet').disabled,true);assert.equal(nodes.get('#scanEmpty').hidden,false);
-console.log('Inicialização dos espaços de avaliação, correção e administração e geração estruturada verificadas com DOM simulado.');
+// Reproduce the user's path: an anonymous sheet has a calculated grade, but
+// assigning a student and confirming it must precede exporting that grade.
+context.createImageBitmap=async()=>({width:800,height:370,close(){}});
+context.scanSheet=()=>({...firstScanner(),student:0});context.decodeCard=()=>0;
+await photoField.onchange({target:photoField});
+nodes.get('#saveCorrection').onclick();
+assert(nodes.get('#correctionActionMessage').textContent.includes('Escolha o estudante'),'An unmet requirement must be reported beside the clicked button');
+assert.equal(JSON.parse(memory.get('carijo-corrections-local-v1')).results.length,0);
+nodes.get('#exportGrades').onclick();assert(nodes.get('#gradeExportMessage').textContent.includes('Confirmar e guardar correção'));
+nodes.get('#reviewStudentSelect').onchange({target:{value:'1'}});
+assert(nodes.get('#correctionScore').textContent.includes('10 / 10'),'Assigning an anonymous sheet must preserve its answers');
+nodes.get('#saveCorrection').onclick();
+const confirmed=JSON.parse(memory.get('carijo-corrections-local-v1')).results;
+assert.equal(confirmed.length,1);assert.equal(confirmed[0].name,'Maria');assert.equal(confirmed[0].score,10);
+assert(nodes.get('#correctionResults').innerHTML.includes('Maria'));assert(nodes.get('#correctionActionMessage').textContent.includes('confirmada e guardada'));
+let feedbackHtml='';context.printDocument=html=>{feedbackHtml=html;};nodes.get('#printCorrectionFeedback').onclick();
+assert(feedbackHtml.includes('Questão 1'));assert(feedbackHtml.includes('Resposta do estudante: B'));assert(feedbackHtml.includes('Nota: 10 / 10'));
+nodes.get('#gradeTurma').value='123';nodes.get('#gradeId').value='1';nodes.get('#gradeDate').value='';nodes.get('#gradeWeight').value='1';nodes.get('#gradeType').value='Prova';nodes.get('#gradeQuarter').value='1';
+nodes.get('#exportGrades').onclick();assert(nodes.get('#gradeExportMessage').textContent.includes('data da avaliação'));
+let exportBlob;context.Blob=Blob;context.URL={createObjectURL(blob){exportBlob=blob;return 'blob:test-export';},revokeObjectURL(){}};
+nodes.get('#gradeDate').value='2026-10-06';context.confirm=()=>{throw new Error('The explicit download action must not depend on an extra browser confirmation');};
+nodes.get('#exportGrades').onclick();assert.equal(downloads.length,1);assert.equal(downloads[0].name,'Carijo_notas_T123_2026-10-06.xlsx');
+const exported=new TextDecoder().decode(await exportBlob.arrayBuffer());assert(exported.includes('Maria'));assert(!exported.includes('João'));
+assert(nodes.get('#gradeExportMessage').textContent.includes('1 nota(s)'));
+await photoField.onchange({target:photoField});nodes.get('#reviewRegistration').value='003';nodes.get('#reviewName').value='Ana';nodes.get('#reviewAddStudent').onclick();
+assert(nodes.get('#reviewStudentHelp').textContent.includes('Ana'));assert(nodes.get('#correctionScore').textContent.includes('10 / 10'),'Quick registration must preserve the photographed answers');
+const originalWrite=context.localStorage.setItem;context.localStorage.setItem=()=>{throw new Error('QuotaExceededError');};nodes.get('#saveCorrection').onclick();
+assert(nodes.get('#correctionActionMessage').textContent.includes('leitura está preservada'));
+assert.equal(JSON.parse(memory.get('carijo-corrections-local-v1')).results.length,1,'A failed write must not create an apparent saved grade');
+context.localStorage.setItem=originalWrite;nodes.get('#saveCorrection').onclick();assert.equal(JSON.parse(memory.get('carijo-corrections-local-v1')).results.length,2,'Retry after storage recovery must save the preserved reading');
+console.log('Leitura, identificação, confirmação, devolutiva e download da planilha verificados com DOM simulado.');
