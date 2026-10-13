@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="carijo-release" content="2026-10-06-correcoes-acoes" />
+  <meta name="carijo-release" content="2026-10-13-editorial" />
+  <meta name="theme-color" content="#243c35" />
   <meta name="description" content="Carijó — planejamento pedagógico para professores da Rede Municipal de Florianópolis." />
   <meta name="referrer" content="no-referrer" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://cdn.jsdelivr.net https://tessdata.projectnaptha.com https://zfztuvkrejskelaomoan.supabase.co wss://zfztuvkrejskelaomoan.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'" />
@@ -12,6 +13,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="editorial.css?v=20261013" media="screen" />
 </head>
 <body>
   <div class="app-shell">
@@ -51,7 +53,7 @@
       </div>
 
       <div class="profile">
-        <div class="avatar">MC</div>
+        <div class="avatar" aria-hidden="true">C</div>
         <div><strong id="authUserName">Modo local</strong><small id="authUserState">Dados neste dispositivo</small></div>
         <button id="authButton" aria-label="Abrir dados e cópias de segurança" title="Dados e cópias de segurança">Dados</button>
       </div>
@@ -70,15 +72,17 @@
 
       <section class="screen active" id="upload">
         <div class="page-wrap medium manual-start">
-          <div class="cover-hero" role="img" aria-label="Gavião-carijó em voo sobre a Mata Atlântica, carregando um sabiá-laranjeira com pequeno chapéu de formatura">
-            <div class="cover-hero-copy"><span>GAVIÃO</span><strong>Carijó</strong><p>Você sabia que o sabiá sabia assoviar?</p></div>
+          <div class="cover-hero">
+            <div class="cover-hero-copy"><span>GAVIÃO</span><h1>Carijó</h1><p>Você sabia que o sabiá sabia assoviar?</p></div>
+            <span class="cover-caption">A burocracia no automático.<br>A docência, não.</span>
           </div>
           <p class="cultural-note">A máquina organiza o papel. Você conhece a turma. Um planejamento decente precisa da realidade que nenhum botão viveu.</p>
+          <div class="home-section-heading"><div><span class="section-kicker">ATELIÊ DOCENTE</span><h2>O que vamos preparar?</h2></div><p>Menos formulário.<br>Mais espaço para pensar.</p></div>
           <div class="home-actions" aria-label="O que deseja fazer?">
-            <button class="home-action" data-start="plan"><span class="home-action-icon" aria-hidden="true">↗</span><strong>Criar planejamento</strong><span>Trimestral ou quinzenal, com suas escolhas e revisão pedagógica.</span><small>Começar →</small></button>
-            <button class="home-action" data-start="activity"><span class="home-action-icon" aria-hidden="true">≡</span><strong>Criar atividade ou avaliação</strong><span>Escolha o formato, as habilidades e as condições da sua aula.</span><small>Começar →</small></button>
-            <button class="home-action" id="homeCorrection"><span class="home-action-icon" aria-hidden="true">◎</span><strong>Corrigir avaliação</strong><span>Leitura por câmera e apoio à correção dissertativa.</span><small>Abrir central de correção →</small></button>
-            <button class="home-action" id="homeDocuments"><span class="home-action-icon" aria-hidden="true">▦</span><strong>Meus documentos</strong><span>Abra os trabalhos salvos neste dispositivo ou na sua conta.</span><small>Continuar →</small></button>
+            <button class="home-action home-action-primary" data-start="plan"><span class="home-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4.5h7a3 3 0 0 1 3 3V21a4 4 0 0 0-4-3H4zM14 7.5h6V21h-6M7 8h4M7 11h4"/></svg></span><strong>Criar planejamento</strong><span>Trimestral ou quinzenal, com suas escolhas e revisão pedagógica.</span><small>Planejar <span aria-hidden="true">↗</span></small></button>
+            <button class="home-action" data-start="activity"><span class="home-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 3H5v18h14V8zM14 3v5h5M8 12h8M8 16h5"/></svg></span><strong>Criar atividade ou avaliação</strong><span>Escolha o formato, as habilidades e as condições da sua aula.</span><small>Criar proposta <span aria-hidden="true">↗</span></small></button>
+            <button class="home-action" id="homeCorrection"><span class="home-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5M7 12l3 3 7-7"/></svg></span><strong>Corrigir avaliação</strong><span>Leitura por câmera e apoio à correção dissertativa.</span><small>Abrir correção <span aria-hidden="true">↗</span></small></button>
+            <button class="home-action" id="homeDocuments"><span class="home-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 7V4h7l2 3h9v13H3zM3 10h18M8 14h8"/></svg></span><strong>Meus documentos</strong><span>Reabra, revise e exporte os trabalhos que você salvou.</span><small>Consultar acervo <span aria-hidden="true">↗</span></small></button>
           </div>
           <details class="home-details"><summary>A nuvem manda a conta: como funciona o acesso</summary><section class="cost-manifesto" aria-labelledby="costManifestoTitle">
             <div class="cost-manifesto-icon" aria-hidden="true">$</div>
@@ -165,7 +169,7 @@
 
       <section class="screen" id="choose">
         <div class="page-wrap medium">
-          <div class="eyebrow"><span>03</span> PRODUTIVIDADE CONFIRMADA</div>
+          <div class="eyebrow"><span>02</span> ESCOLHER O DOCUMENTO</div>
           <h1>Qual documento<br><em>vamos automatizar?</em></h1>
           <p class="lead">Escolha a turma, o trimestre e o tipo de documento. O calendário organiza o trabalho; não recebe o poder de prever a vida.</p>
 
@@ -208,7 +212,7 @@
           <div class="planner-head">
             <button class="back-link" data-go="choose">← Voltar</button>
             <div class="eyebrow"><span>✦</span> ATIVIDADES E AVALIAÇÕES</div>
-            <h1>Atividades e<br><em>avaliações instantâneas.</em></h1>
+            <h1>Uma proposta.<br><em>Muitas formas de aprender.</em></h1>
             <p class="lead">Defina o formato e o que deseja trabalhar. A proposta precisa da sua leitura da turma para fazer sentido em sala.</p>
           </div>
           <div class="form-flow">

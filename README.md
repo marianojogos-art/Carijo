@@ -1,5 +1,11 @@
 # Carijó
 
+## Interface editorial · outubro de 2026
+
+A apresentação visual está em `editorial.css`, carregada após `styles.css` somente em tela. Mantém a capa, a sátira, os IDs e os fluxos existentes; unifica navegação, formulários, biblioteca, documentos, avaliações, correção e administração. Os estilos de impressão continuam independentes, assim como a geometria do canvas usado pelo leitor de gabaritos. Em manutenção, não aplique padding, borda ou proporção forçada diretamente ao canvas.
+
+Antes desta revisão foi guardado um ZIP local fora da pasta publicada. O ponto de retorno no GitHub é o commit `a86d8bf23fc5a27dd3d19da44218d1e743da59b2`. O backup de código não substitui cópias do histórico do navegador nem do banco remoto.
+
 ## Planejamentos, supervisão e Assistente SGE
 
 O trimestral considera 12 semanas para calcular a carga, mas apresenta texto contínuo, sem divisão semana a semana e sem três eixos obrigatórios. Habilidades ficam selecionadas por padrão; o professor pode retirar, acrescentar complementos sem BNCC e carregar habilidades anteriores. A cobertura depende da integridade do catálogo local RMEF.
