@@ -349,6 +349,19 @@
   .correction-student-card { background: #eef4e6; border-color: #c4d5b2; padding: 22px; }
   #correctionScore:not(:empty) { font: 400 24px/1.5 var(--serif); color: #355747; padding: 18px 0; border-top: 1px solid var(--line); }
   .correction-action-message { font-size: 14px; padding: 16px 18px; }
+  .transcription-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; }
+  .transcription-columns > div { min-width: 0; }
+  .transcription-columns h3 { margin: 0 0 12px; font: 400 21px/1.4 var(--serif); }
+  .transcription-image { max-height: 620px; overflow: auto; background: #e8eadd; border: 1px solid var(--line); border-radius: 8px; margin-top: 14px; }
+  .transcription-image canvas { display: block; max-width: none; height: auto; }
+  .transcription-image canvas[hidden] { display: none; }
+  .transcription-image p { padding: 18px; }
+  #writtenTranscript { width: 100%; min-height: 360px; font: 16px/1.8 ui-monospace, monospace; tab-size: 4; resize: vertical; }
+  .professional-workspace .transcript-approval { display: flex; flex-direction: row; align-items: flex-start; gap: 10px; margin: 16px 0; line-height: 1.7; }
+  .transcript-approval input { flex: 0 0 auto; width: 18px; height: 18px; margin-top: 4px; }
+  #transcriptWarnings:not(:empty) { white-space: pre-wrap; overflow-wrap: anywhere; padding: 14px; border-left: 3px solid #98702c; background: #fff5d9; color: #5d461e; }
+  .transcription-review[data-state=error] #ocrProgress { color: #8a3029; font-weight: 600; }
+  @media (max-width: 800px) { .transcription-columns { grid-template-columns: minmax(0, 1fr); } .transcription-image { max-height: 45vh; } }
   .professional-workspace [aria-invalid=true] { border-color: #b66c40; outline: 2px solid #eed4bc; }
   .workspace-table-scroll { border: 1px solid var(--line); border-radius: 12px; background: #fffef9; max-width: 100%; overscroll-behavior-x: contain; }
   .workspace-table { font-size: 13px; }

@@ -28,6 +28,10 @@ Aplicação web de apoio ao planejamento docente, com seleção da Matriz de Ref
 
 ## Desenvolvimento local
 
+A transcrição de respostas escritas oferece imagem ampliável ao lado do texto, avisos de baixa confiança e confirmação de revisão antes de associar o texto à questão. O carregamento próprio preserva a correção em andamento. Veja o diagnóstico, as verificações e as limitações em [TRANSCRICAO-REVISAO.md](TRANSCRICAO-REVISAO.md).
+
+`npm run test:transcription` valida o leitor com mocks. `npm run test:transcription:browser` verifica a interface com Chromium e `playwright-core` já disponíveis (configure `CHROMIUM_PATH` e `PLAYWRIGHT_MODULE` quando necessário). Os testes de navegador bloqueiam acesso externo e usam uma imagem gerada em canvas. `npm run build` cria um pacote estático local em uma nova pasta temporária, valida sintaxe e referências e gera um manifesto SHA-256; não publica nem acessa serviços.
+
 Sirva esta pasta por HTTP (por exemplo, em `http://localhost:3000`). Abrir o arquivo diretamente com `file://` prejudica autenticação, funções remotas e redirecionamentos OAuth.
 
 Com Node.js recente, execute `npm test` e `npm run test:assessments`. Os testes usam IA simulada e não consomem créditos. Use `npm run preview` para a prévia HTTP. Ainda é necessária homologação com celular, impressão física, Word e importação no Assistente. Consulte as entregas em `ETAPA-1.md` a `ETAPA-5.md`.
