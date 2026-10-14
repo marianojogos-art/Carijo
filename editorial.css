@@ -285,6 +285,11 @@
   .generated-plan-body :is(h2, h3) { font-family: var(--serif); font-weight: 400; font-size: 27px; line-height: 1.35; margin: 32px 0 18px; padding: 0 0 10px; border-bottom: 1px solid #d6dfcc; color: #355747; }
   .generated-plan-body h4 { font-size: 17px; line-height: 1.5; }
   .generated-plan-body p, .generated-plan-body li { font-size: 15px; line-height: 1.9; color: #3e493d; }
+  #planDocument .generated-plan-body, #planDocument :is(p, li) {
+    text-align: justify;
+    text-align-last: start;
+    hyphens: auto;
+  }
   .generated-plan-body li { padding: 8px 12px 8px 26px; background: #f5f7ef; }
   .generated-plan-body li::before { width: 5px; height: 5px; top: 19px; }
   .doc-section { padding: 32px 44px; }
