@@ -249,7 +249,7 @@ let authReady = false;
 let historyPlans = [];
 let currentPlanId = null;
 let currentActivityText = "";
-let lastFocusedElement = null;
+const modalStack = [];
 let usageState = null;
 let generationInProgress = false;
 let resolveGenerationConfirmation = null;
@@ -677,12 +677,15 @@ async function extractSpreadsheet(file, onProgress) {
 
 function showScreen(id) {
   $$(".screen").forEach(screen => { screen.classList.toggle("active", screen.id === id);screen.setAttribute("aria-hidden",String(screen.id!==id)); });
-  const map = { upload: 0, processing: 0, review: 0, choose: 1, planForm: 2, activityBuilder: 2, result: 2 };
-  const activeStep = map[id] ?? 0;
+  const map = { upload: 0, processing: 0, review: 0, choose: 1, planForm: 2, activityBuilder: 2, result: 2, historyPage: 3 };
+  const activeStep = map[id] ?? -1;
   $$(".step").forEach((step, index) => {
+    const complete = activeStep > index && activeStep < 3;
     step.classList.toggle("active", index === activeStep);
-    step.classList.toggle("complete", index < activeStep);
-    $(".step-state", step).textContent = index < activeStep ? "✓" : index === activeStep ? "●" : "○";
+    step.classList.toggle("complete", complete);
+    if (index === activeStep) step.setAttribute("aria-current", "page");
+    else step.removeAttribute("aria-current");
+    $(".step-state", step).textContent = complete ? "✓" : index === activeStep ? "●" : "○";
   });
   window.scrollTo({ top: 0, behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
   const heading=document.querySelector(`#${id} h1, #${id} h2`);if(heading){heading.setAttribute("tabindex","-1");heading.focus({preventScroll:true});}
@@ -2163,19 +2166,51 @@ function toast(message) {
   setTimeout(() => $("#toast").classList.remove("show"), 2200);
 }
 
+function topModalElement() {
+  return modalStack.at(-1)?.modal;
+}
+
+function modalFocusableElements(modal) {
+  return $$("button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])", modal)
+    .filter(element => element.offsetParent !== null && !element.closest("[inert]"));
+}
+
+function syncModalLayers() {
+  modalStack.forEach(({modal}, index) => {
+    const top = index === modalStack.length - 1;
+    modal.inert = !top;
+    modal.setAttribute("aria-hidden", String(!top));
+    modal.style.zIndex = String(50 + index);
+  });
+}
+
 function showModalElement(modal) {
-  if (!modal) return;
-  lastFocusedElement = document.activeElement;
+  if (!modal || modalStack.some(entry => entry.modal === modal)) return;
+  modalStack.push({modal, opener: document.activeElement, zIndex: modal.style.zIndex});
   modal.classList.add("open");
-  modal.setAttribute("aria-hidden", "false");
-  setTimeout(() => $("button, input, select, textarea, [tabindex]:not([tabindex='-1'])", modal)?.focus(), 0);
+  syncModalLayers();
+  setTimeout(() => {
+    if (topModalElement() === modal) modalFocusableElements(modal)[0]?.focus();
+  }, 0);
 }
 
 function hideModalElement(modal) {
   if (!modal) return;
+  const index = modalStack.findIndex(entry => entry.modal === modal);
+  if (index < 0) return;
+  const wasTop = topModalElement() === modal;
+  const [{opener, zIndex}] = modalStack.splice(index, 1);
+  // Preserve the return path if a parent closes while a child remains open.
+  modalStack.forEach(entry => { if (entry.opener && modal.contains(entry.opener)) entry.opener = opener; });
   modal.classList.remove("open");
+  modal.inert = false;
+  modal.style.zIndex = zIndex;
   modal.setAttribute("aria-hidden", "true");
-  if (lastFocusedElement instanceof HTMLElement) lastFocusedElement.focus();
+  syncModalLayers();
+  if (!wasTop) return;
+  const top = topModalElement();
+  if (opener instanceof HTMLElement && opener.isConnected && !opener.closest("[inert]") && opener.offsetParent !== null && (!top || top.contains(opener))) opener.focus();
+  else if (top) modalFocusableElements(top)[0]?.focus();
 }
 
 function openPrivacyModal() { showModalElement($("#privacyModal")); }
@@ -2527,15 +2562,18 @@ document.addEventListener("DOMContentLoaded", () => {
   $(".mobile-menu").addEventListener("click", event => { const open = $(".sidebar").classList.toggle("open"); event.currentTarget.setAttribute("aria-expanded", String(open)); });
   $$(".sidebar button").forEach(button => button.addEventListener("click", () => { $(".sidebar").classList.remove("open"); $(".mobile-menu").setAttribute("aria-expanded", "false"); }));
   document.addEventListener("keydown", event => {
-    const modal = $(".modal.open");
+    // Native dialogs already own keyboard handling in the browser's top layer.
+    if ($("dialog[open]")) return;
+    const modal = topModalElement();
     if (!modal) return;
     if (event.key === "Escape") { event.preventDefault(); $(".modal-close", modal)?.click(); return; }
     if (event.key !== "Tab") return;
-    const focusable = $$("button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])", modal).filter(element => element.offsetParent !== null);
+    const focusable = modalFocusableElements(modal);
     if (!focusable.length) return;
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
-    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    if (!modal.contains(document.activeElement)) { event.preventDefault(); (event.shiftKey ? last : first).focus(); }
+    else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
   });
   void initializeAuth();

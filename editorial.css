@@ -71,7 +71,7 @@
   .step-state, .step.complete .step-state { color: #cbd8a9; }
   .step.active .step-state { color: var(--coral); }
   .sidebar .admin-nav { margin: 14px 0 0; border-color: #6a8174; color: #d8e1d4; background: transparent; font-size: 12px; box-shadow: none; }
-  .sidebar .admin-nav:hover { background: #ffffff0b; }
+  .sidebar .admin-nav:hover:not(:disabled), .sidebar .admin-nav:focus-visible { background: #355747; color: #fffaf0; border-color: #9caf91; }
   .side-note { margin: 32px 8px 22px; padding: 22px 0 0; background: none; border: 0; border-top: 1px solid #ffffff24; border-radius: 0; }
   .spark-icon { color: #e4c683; }
   .side-note strong { font-size: 21px; line-height: 1.35; color: #f1f0df; margin: 12px 0; }
@@ -127,8 +127,6 @@
   .home-action-icon svg { width: 25px; height: 25px; }
   .home-action small { display: flex; justify-content: space-between; align-items: center; gap: 16px; width: 100%; border-top: 1px solid var(--line); font-size: 12px; padding-top: 16px; margin-top: auto; }
   .home-action small span { font-size: 19px; line-height: 1; }
-  .home-action-primary { background: #eaf0e3; border-color: #cbd8bf; }
-  .home-action-primary .home-action-icon { background: #d8e3cc; }
   .home-details { padding: 22px 24px; background: #fffef9b3; border-radius: 14px; margin: 14px 0; }
   .home-details > summary { font-size: 14px; color: var(--ink); }
   summary { cursor: pointer; line-height: 1.6; }

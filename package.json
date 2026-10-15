@@ -10,6 +10,7 @@
     "test:transcription:browser": "node tests/transcription-browser.mjs",
     "build": "node tests/build-static.mjs",
     "test:backups": "node --check backup-data.mjs && node tests/backups.mjs",
-    "test:backups:browser": "node tests/backups-browser.mjs"
+    "test:backups:browser": "node tests/backups-browser.mjs",
+    "test:interface:browser": "node tests/interface-browser.mjs"
   }
 }
