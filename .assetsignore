@@ -5,4 +5,13 @@ package.json
 package-lock.json
 wrangler.toml
 .git/**
+.gitignore
+.wrangler/**
+node_modules/**
 .env*
+*.log
+*.local
+*.pem
+*.key
+Carijo_correcoes_privadas*.json
+Carijo_notas*.xlsx
