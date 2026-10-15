@@ -2248,53 +2248,78 @@ function closeDataModal() {
   hideModalElement($("#dataModal"));
 }
 
-function exportLocalData() {
-  saveLocalData();
-  const payload = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || "{}");
-  payload.documents = readDeviceDocuments();
-  const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `carijo-turmas-${new Date().toISOString().slice(0, 10)}.json`;
-  link.click();
-  URL.revokeObjectURL(url);
-  toast("Backup baixado");
+let backupImportInProgress = false;
+let backupRecovery = null;
+function loadBackupTools() { return import("./backup-data.mjs"); }
+function backupReport(message, error = false) {
+  const node = $("#backupStatus");
+  node.textContent = message;
+  node.setAttribute("role", error ? "alert" : "status");
 }
-
-async function importLocalData(event) {
-  const file = event.target.files?.[0];
-  if (!file) return;
+function readBackupDocuments() {
+  const raw = localStorage.getItem(DEVICE_DOCUMENTS_KEY);
+  let documents;
+  try { documents = raw === null ? [] : JSON.parse(raw); }
+  catch { throw new Error("O histórico local está ilegível. Nenhum dado foi substituído."); }
+  if (!Array.isArray(documents)) throw new Error("O histórico local tem formato inválido. Nenhum dado foi substituído.");
+  return documents;
+}
+function assertBackupAccount() {
+  const saved = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || "null");
+  if (saved?.ownerId && saved.ownerId !== currentUser?.id) throw new Error("Entre na conta dos dados salvos antes de importar ou exportar este backup.");
+}
+function downloadBackup(payload, name) {
+  const blob = new Blob([JSON.stringify(payload)], {type:"application/json"});
+  const url = URL.createObjectURL(blob), link = document.createElement("a");
+  link.href = url; link.download = name; document.body.append(link);
+  try { link.click(); } finally { link.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000); }
+}
+async function exportLocalData() {
+  if (backupImportInProgress) return;
   try {
-    if (file.size > 2 * 1024 * 1024) throw new Error("O backup ultrapassa o limite de 2 MB.");
-    const payload = JSON.parse(await file.text());
-    if (!Array.isArray(payload.classes)) throw new Error("Este arquivo não contém turmas válidas.");
-    if (payload.classes.length > 100) throw new Error("O backup contém turmas demais.");
-    if (payload.ownerId && currentUser && payload.ownerId !== currentUser.id) throw new Error("Este backup pertence a outra conta.");
-    state.classes = payload.classes.map((item, index) => {
-      const name = String(item?.name || "").trim().slice(0, 80);
-      const subject = String(item?.subject || "").trim().slice(0, 120);
-      if (!name || !subject) throw new Error(`A turma ${index + 1} está incompleta.`);
-      const schedule = Array.isArray(item.schedule) ? item.schedule.slice(0, 30).map(value => String(value).slice(0, 100)) : [];
-      return { id: Number.isFinite(Number(item.id)) ? Number(item.id) : index + 1, name, subject, lessons: Math.max(1, Math.min(30, Number(item.lessons) || 1)), schedule, notes: String(item.notes || "").slice(0, 4000) };
-    });
-    if (Array.isArray(payload.skills)) state.skills = new Set(payload.skills.slice(0, 300).map(value => String(value).slice(0, 200)));
-    if (["quarter", "fortnight"].includes(payload.planType)) state.planType = payload.planType;
-    if (Array.isArray(payload.documents)) {
-      const imported = payload.documents.slice(0, 200).filter(item => typeof item?.document_html === "string" && ["quarter", "fortnight", "activity"].includes(item.plan_type)).map(item => ({ ...item, id: `local-${crypto.randomUUID()}`, user_id: null, document_html: sanitizeDocumentHtml(item.document_html) }));
-      localStorage.setItem(DEVICE_DOCUMENTS_KEY, JSON.stringify([...imported, ...readDeviceDocuments()]));
-    }
-    saveLocalData();
-    renderManualStart();
-    renderSchedule();
-    renderSkills();
-    toast("Backup importado com sucesso");
-    closeDataModal();
+    const {MAX_BACKUP_BYTES, validateBackup} = await loadBackupTools();
+    assertBackupAccount();
+    const payload = {version:1, savedAt:new Date().toISOString(), ownerId:currentUser?.id || null,
+      classes:state.classes, skills:[...state.skills], planType:state.planType, documents:readBackupDocuments()};
+    validateBackup(payload);
+    const size = new Blob([JSON.stringify(payload)]).size;
+    downloadBackup(payload, `carijo-turmas-${new Date().toISOString().slice(0, 10)}.json`);
+    backupReport(`Backup completo: ${payload.classes.length} turma(s) e ${payload.documents.length} documento(s), incluindo suas versões. Download solicitado.${size > MAX_BACKUP_BYTES ? " Atenção: o arquivo excede 20 MiB e não poderá ser importado inteiro nesta versão. Nenhum documento foi cortado." : ""}`);
+  } catch (error) { backupReport(error.message || "Não foi possível exportar o backup.", true); }
+}
+async function importLocalData(event) {
+  const field = event.target, file = field.files?.[0];
+  if (!file || backupImportInProgress) return;
+  const owner = currentUser?.id || null;
+  backupImportInProgress = true; field.disabled = true; $("#exportData").disabled = true;
+  backupReport("Lendo e validando o backup completo…");
+  let restored = false;
+  try {
+    const {MAX_BACKUP_BYTES, prepareRestore, commitRestore} = await loadBackupTools();
+    if (file.size > MAX_BACKUP_BYTES) throw new Error("O backup ultrapassa o limite seguro de 20 MiB. Nenhum item foi importado.");
+    let payload;
+    try { payload = JSON.parse(await file.text()); } catch { throw new Error("O arquivo não contém JSON válido. Nenhum item foi importado."); }
+    if ((currentUser?.id || null) !== owner) throw new Error("A conta mudou durante a leitura. Selecione o arquivo novamente.");
+    assertBackupAccount();
+    const next = prepareRestore(payload, {classes:state.classes, documents:readBackupDocuments(), skills:state.skills,
+      planType:state.planType, ownerId:owner, sanitize:sanitizeDocumentHtml});
+    const settings = {version:1, savedAt:new Date().toISOString(), ownerId:owner, classes:next.classes, skills:next.skills, planType:next.planType};
+    commitRestore(localStorage, LOCAL_STORAGE_KEY, DEVICE_DOCUMENTS_KEY, settings, next.documents);
+    state.classes = next.classes; state.skills = new Set(next.skills); state.planType = next.planType; restored = true;
+    backupRecovery = null; $("#downloadBackupRecovery").hidden = true;
+    renderManualStart(); renderSchedule(); renderSkills(); updateStorageStatus(settings);
+    const counts = next.counts;
+    backupReport(`Restauração concluída: ${counts.received} documento(s) conferido(s), ${counts.added} adicionado(s), ${counts.duplicates} já existente(s). Total local: ${counts.total}. Turmas: ${counts.classesAdded} adicionada(s) de ${counts.classesReceived} recebida(s).${counts.conflicts ? ` ${counts.conflicts} documento(s) com identidade repetida e conteúdo diferente foram preservados como cópias independentes.` : ""} As versões foram mantidas. Restauração salva somente neste navegador.`);
   } catch (error) {
-    toast(error.message || "Não foi possível importar este arquivo");
-  } finally {
-    event.target.value = "";
-  }
+    if (error.recovery) { backupRecovery = error.recovery; $("#downloadBackupRecovery").hidden = false; }
+    backupReport(restored ? "O backup foi gravado, mas a tela não pôde ser atualizada. Reabra o histórico antes de tentar importar novamente." : error.message || "Não foi possível importar este arquivo. Nenhum item foi importado.", true);
+  } finally { field.value = ""; field.disabled = false; $("#exportData").disabled = false; backupImportInProgress = false; }
+}
+function downloadBackupRecovery() {
+  if (!backupRecovery) return;
+  // Preserve the exact previous values even if a browser stops accepting writes.
+  downloadBackup(backupRecovery, "carijo-recuperacao-armazenamento.json");
+  backupReport("Cópia de recuperação dos valores anteriores solicitada. Ela contém as duas chaves originais de armazenamento; guarde-a para recuperação assistida.");
 }
 
 function clearLocalData() {
@@ -2475,6 +2500,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderHistory(historyPlans.filter(plan => normalize(`${plan.class_name} ${plan.subject} ${plan.period_label}`).includes(query)));
   });
   $("#importData").addEventListener("change", importLocalData);
+  $("#downloadBackupRecovery").addEventListener("click", downloadBackupRecovery);
   $("#clearData").addEventListener("click", clearLocalData);
   $("#privacyButton").addEventListener("click", openPrivacyModal);
   $$('[data-close-privacy]').forEach(button => button.addEventListener("click", closePrivacyModal));

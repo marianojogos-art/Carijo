@@ -28,6 +28,8 @@ Aplicação web de apoio ao planejamento docente, com seleção da Matriz de Ref
 
 ## Desenvolvimento local
 
+O backup geral aceita importações de até **20 MiB**, sem corte de 200 documentos. Valida o arquivo inteiro, preserva documentos e turmas locais, evita repetir cópias já existentes e informa as contagens na própria janela. A restauração permanece local; versões e instrumentos vinculados aos documentos são mantidos. Consulte [BACKUP-REVISAO.md](BACKUP-REVISAO.md) para regras de conflito, falhas de armazenamento e testes. Execute `npm run test:backups` e, com Chromium/Playwright disponíveis, `npm run test:backups:browser`.
+
 A transcrição de respostas escritas oferece imagem ampliável ao lado do texto, avisos de baixa confiança e confirmação de revisão antes de associar o texto à questão. O carregamento próprio preserva a correção em andamento. Veja o diagnóstico, as verificações e as limitações em [TRANSCRICAO-REVISAO.md](TRANSCRICAO-REVISAO.md).
 
 `npm run test:transcription` valida o leitor com mocks. `npm run test:transcription:browser` verifica a interface com Chromium e `playwright-core` já disponíveis (configure `CHROMIUM_PATH` e `PLAYWRIGHT_MODULE` quando necessário). Os testes de navegador bloqueiam acesso externo e usam uma imagem gerada em canvas. `npm run build` cria um pacote estático local em uma nova pasta temporária, valida sintaxe e referências e gera um manifesto SHA-256; não publica nem acessa serviços.

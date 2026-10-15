@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="carijo-release" content="2026-10-14-texto-justificado" />
+  <meta name="carijo-release" content="2026-10-15-backup" />
   <meta name="theme-color" content="#243c35" />
   <meta name="description" content="Carijó — planejamento pedagógico para professores da Rede Municipal de Florianópolis." />
   <meta name="referrer" content="no-referrer" />
@@ -507,6 +507,9 @@
         <button class="text-button danger-button" id="clearData">Apagar dados deste dispositivo</button>
         <button class="text-button" id="privacyButton">Privacidade e uso da IA</button>
       </div>
+      <p id="backupStatus" role="status" aria-live="polite"></p>
+      <button id="downloadBackupRecovery" class="secondary-button" type="button" hidden>Baixar cópia de recuperação</button>
+      <p class="data-footnote">Importe arquivos de até 20 MiB. Todos os documentos e versões são conferidos antes da gravação; documentos locais são preservados e cópias já existentes não são repetidas. A importação não envia documentos à nuvem.</p>
       <p class="data-footnote">Você pode gerar sem conta. Entre apenas se quiser sincronizar documentos entre dispositivos. O backup é sua cópia portátil.</p>
       <button class="secondary-button" id="optionalLogin">Entrar para sincronizar histórico</button>
     </div>
@@ -612,7 +615,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite">✓ Copiado para a área de transferência</div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=20261015-backup"></script>
   <script src="document-editor.js"></script>
   <script type="module" src="export-ui.mjs"></script>
   <script type="module" src="assessment-ui.mjs"></script>
